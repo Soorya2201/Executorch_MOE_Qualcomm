@@ -1,7 +1,7 @@
 """App's real extraction with a chosen NPU model.  bench_meeting_notes.py {qwen17|phi|config} FIXTURE MAX_CHARS  (phi/config = whatever config.yaml says)"""
 import sys, time
 from pathlib import Path
-APP = Path(r"C:\et\mg_upstream\meetinggraph"); sys.path.insert(0, str(APP))
+APP = Path(__file__).resolve().parents[2] / "meetinggraph"; sys.path.insert(0, str(APP))
 from app.config import load_config
 from app.models.llm import make_llm
 from app.pipeline import extract as ex
