@@ -352,6 +352,7 @@ def combine_parts(llm: BaseLLM, parts: list[dict], segments: list[dict], title: 
     return draft
 
 
+
 def extract_draft(llm: BaseLLM, segments: list[dict], title: str, existing_titles: list[str],
                   max_chars: int = 6000) -> dict:
     if not segments:

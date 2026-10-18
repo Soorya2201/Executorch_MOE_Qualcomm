@@ -12,6 +12,7 @@ import json
 import re
 import queue
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -162,6 +163,29 @@ _REPLY_START = ("<|assistant|>", "<|im_start|>assistant", "<|start_header_id|>as
 _REPLY_END = ("<|end|>", "<|im_end|>", "<|endoftext|>", "<|eot_id|>", "<|end_of_text|>")
 
 
+def free_commit_gb() -> float | None:
+    """Memory Windows can still hand out (RAM + page file), in GB; None if unknown."""
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+
+        st = MEMORYSTATUSEX()
+        st.dwLength = ctypes.sizeof(st)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+            return None
+        return st.ullAvailPageFile / 2**30          # "page file" here = commit limit left (RAM + page file)
+    except Exception:
+        return None
+
+
 class _RunnerServer:
     """One qnn_llama_runner --server process: the .pte is loaded once and reused for every request.
 
@@ -208,7 +232,17 @@ class _RunnerServer:
             if line == "READY":
                 return
             if line.startswith("ERR"):
-                raise LLMError(f"NPU runner could not load the model: {line[4:]}")
+                raise LLMError(self._load_failure_message(line[4:]))
+
+    def _load_failure_message(self, detail: str) -> str:
+        """Say WHY a load failed when it is memory (the usual cause): the runner itself only says 'failed'."""
+        free = free_commit_gb()
+        model = Path(self.args[self.args.index("--model_path") + 1]) if "--model_path" in self.args else None
+        need = (model.stat().st_size / 2**30 + 1.5) if model and model.exists() else 6.0
+        if free is not None and free < need:
+            return (f"Not enough free memory to load the AI model ({free:.1f} GB free, about {need:.0f} GB needed). "
+                    "Close other heavy programs (or wait for a model export to finish) and press Try again.")
+        return f"NPU runner could not load the model: {detail}"
 
     def stop(self):
         p, self.proc = self.proc, None

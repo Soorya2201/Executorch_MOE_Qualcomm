@@ -249,3 +249,4 @@ def test_record_opens_devices_off_the_ui_thread(tmp_path, monkeypatch):
     pill.anim.stop()
     pill.rec = None
     pill.hide()
+
