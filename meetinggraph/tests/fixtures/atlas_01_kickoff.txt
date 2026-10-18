@@ -1,0 +1,10 @@
+# Fictional meeting for testing. Project: Atlas. Title: Kickoff
+[00:00:05-00:00:12] (remote) Welcome to the Atlas kickoff.
+[00:00:12-00:00:20] (remote) New feature: User login — email and password sign-in for the mobile app.
+[00:00:20-00:00:30] (you) New feature: Offline sync. It lets users edit notes without a connection and syncs when back online.
+[00:00:30-00:00:38] (remote) Offline sync depends on User login.
+[00:00:38-00:00:46] (you) Subtasks for Offline sync: local change queue; storage format decision.
+[00:00:46-00:00:55] (remote) New feature: Search — full-text search across notes.
+[00:00:55-00:01:05] (remote) Decision: we use SQLite for local storage.
+[00:01:05-00:01:12] (you) Action item: Priya to draft the login API by Friday.
+[00:01:12-00:01:20] (remote) Open question: do we need SSO for enterprise customers?

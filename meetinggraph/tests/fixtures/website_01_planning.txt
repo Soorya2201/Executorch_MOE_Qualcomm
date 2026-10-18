@@ -1,0 +1,3 @@
+# Fictional meeting for testing. Project: Website. Title: Planning
+[00:00:03-00:00:10] (remote) New feature: Pricing page — public plans and prices.
+[00:00:10-00:00:18] (remote) Decision: launch the pricing page before the conference.

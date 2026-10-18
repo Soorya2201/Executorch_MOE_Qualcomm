@@ -1,0 +1,15 @@
+Priya: Okay, let's start. This is the design review for Atlas.
+Arjun: So the big thing from the beta users is they keep losing notes when the train goes into a tunnel.
+Priya: Right, that's the offline sync work. Where are we on that?
+Arjun: The local change queue is done. Conflict handling is still last-write-wins, which people hate when two devices edit the same note.
+Maya: Could we show both versions and let the user pick? Like a merge screen.
+Priya: I like that. Let's make that a proper feature, call it conflict review. It obviously can't happen before offline sync is finished.
+Arjun: Agreed. I'd split it into a diff view and a "keep both" button.
+Maya: Also, we promised the enterprise folks single sign-on. That needs the login work to be finished first.
+Priya: Let's add SSO as a new feature then, but it's blocked until we pick an identity provider.
+Arjun: Who's choosing the provider?
+Priya: I'll take that. I'll have a shortlist by Friday.
+Maya: And the PDF export, we already dropped search, are we still doing export?
+Priya: Yes, export stays. No change there.
+Arjun: One open question: do we need end-to-end encryption before we ship sync to enterprise customers?
+Priya: Good question, let's park that for next week. Decision for today: conflict review goes into the next sprint.

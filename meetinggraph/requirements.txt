@@ -1,0 +1,6 @@
+# Core app (required)
+PyYAML>=6.0
+PySide6>=6.6
+numpy>=1.24
+soundcard>=0.4.3
+pytest>=8.0

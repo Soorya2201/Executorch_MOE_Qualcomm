@@ -1,0 +1,47 @@
+# MeetingGraph configuration. Everything runs locally; no cloud endpoints are allowed.
+
+workspace: ./workspace          # project files live here (relative to this folder)
+
+llm:
+  # heuristic          = no model; rule-based extraction (works immediately, for plumbing tests)
+  # ollama             = local Ollama server on 127.0.0.1 (dev laptop; CPU/GPU, NOT the NPU)
+  # executorch_runner  = ExecuTorch runner executable (Snapdragon NPU path, set up on the Dell)
+  backend: ollama               # Qwen 2.5 3B through Ollama; falls back to rules if Ollama is not running
+  label: ""                     # optional text shown in the app; empty = automatic
+  max_transcript_chars_per_chunk: 6000
+  ollama:
+    url: http://127.0.0.1:11434
+    model: qwen2.5:3b-instruct   # bigger/better: qwen2.5:7b-instruct (needs ~6 GB RAM)
+    timeout_s: 300
+    num_ctx: 8192               # context window; Ollama's small default would cut long transcripts
+  executorch_runner:
+    # Filled in on the Snapdragon laptop after the model gate. Example shape only:
+    # command: ["C:/path/llama_runner.exe", "--model_path", "C:/path/model.pte",
+    #           "--tokenizer_path", "C:/path/tokenizer.model", "--prompt_file", "{prompt_file}"]
+    # Placeholders: {prompt_file} {prompt} {output_file} {max_tokens}
+    command: []
+    cwd: ""
+    timeout_s: 300
+    verified_on_npu: false      # set true only after profiling shows QNN/HTP delegation
+
+asr:
+  # none               = no speech recognition; import or type transcripts
+  # faster_whisper     = local Whisper on CPU (dev laptop)
+  # executorch_runner  = ExecuTorch ASR runner (Snapdragon NPU path)
+  backend: none
+  label: ""
+  faster_whisper:
+    model: base.en              # tiny.en | base.en | small.en ...
+    compute_type: int8
+    device: cpu
+  executorch_runner:
+    # Placeholders: {audio_file} {output_file}; output JSON [{"start","end","text"}] or text on stdout
+    command: []
+    cwd: ""
+    timeout_s: 600
+    verified_on_npu: false
+
+audio:
+  samplerate: 16000
+  keep_audio_after_commit: false   # true = move WAVs into the project's audio/ folder instead of deleting
+  max_minutes: 60

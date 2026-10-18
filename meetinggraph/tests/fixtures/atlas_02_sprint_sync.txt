@@ -1,0 +1,11 @@
+# Fictional meeting for testing. Project: Atlas. Title: Sprint sync
+[00:00:04-00:00:10] (remote) Quick sprint sync on Atlas.
+[00:00:10-00:00:20] (remote) Change to Offline sync: conflict resolution uses last-write-wins for version one.
+[00:00:20-00:00:28] (you) Subtasks for Offline sync: conflict rules.
+[00:00:28-00:00:36] (remote) The sign-in flow is now done.
+[00:00:36-00:00:46] (you) New feature: Export to PDF — export a notebook as a PDF file.
+[00:00:46-00:00:52] (you) Export to PDF depends on Offline sync.
+[00:00:52-00:01:00] (remote) We are dropping Search for now.
+[00:01:00-00:01:08] (remote) Impact of Offline sync: export must read from the local store.
+[00:01:08-00:01:15] (remote) Decision: ship the beta without search.
+[00:01:15-00:01:22] (you) Action item: Arjun to write conflict tests.
