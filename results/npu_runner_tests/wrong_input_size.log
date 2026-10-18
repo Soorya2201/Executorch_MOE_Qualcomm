@@ -1,0 +1,18 @@
+I 00:00:00.000240 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:339] Model file .\dlv3_qnn.pte is loaded.
+I 00:00:00.000306 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:349] Using method forward
+I 00:00:00.000320 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:396] Setting up planned buffer 0, size 9031680.
+[INFO] [Qnn ExecuTorch]: Deserializing processed data using QnnContextCustomProtocol
+[INFO] [Qnn ExecuTorch]: Creating new backend bundle.
+[INFO] [Qnn ExecuTorch]: create QNN Logger with log_level 1
+[INFO] [Qnn ExecuTorch]: Initialize Qnn backend parameters for Qnn executorch backend type 2
+[INFO] [Qnn ExecuTorch]: Caching: Caching is in RESTORE MODE.
+[INFO] [Qnn ExecuTorch]: QnnContextCustomProtocol expected magic number: 0x5678abcd but get: 0x2000000
+[INFO] [Qnn ExecuTorch]: Running level=1 optimization.
+I 00:00:00.229032 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:420] Method loaded.
+E 00:00:00.229630 executorch:C:\et\executorch\runtime\executor\method.cpp:1381] Output 0 is memory planned, or is a constant. Cannot override the existing data pointer.
+I 00:00:00.229637 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:480] ignoring error from set_output_data_ptr(): 0x2
+E 00:00:00.230106 executorch:C:\et\executorch\runtime\executor\method.cpp:1381] Output 1 is memory planned, or is a constant. Cannot override the existing data pointer.
+I 00:00:00.230109 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:480] ignoring error from set_output_data_ptr(): 0x2
+I 00:00:00.230112 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:483] Inputs prepared.
+I 00:00:00.230199 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:489] Number of inputs: 1
+F 00:00:00.230303 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:579] In function main(), assert failed (file_size == tensor_meta->nbytes()): Input(0) size mismatch. file bytes: 1000, tensor bytes: 602112

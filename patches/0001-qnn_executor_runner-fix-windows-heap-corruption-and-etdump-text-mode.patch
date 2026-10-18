@@ -1,0 +1,32 @@
+diff --git a/examples/qualcomm/executor_runner/qnn_executor_runner.cpp b/examples/qualcomm/executor_runner/qnn_executor_runner.cpp
+index 688a070a98..2abf14ef2f 100644
+--- a/examples/qualcomm/executor_runner/qnn_executor_runner.cpp
++++ b/examples/qualcomm/executor_runner/qnn_executor_runner.cpp
+@@ -34,6 +34,10 @@
+ 
+ #include <chrono>
+ #include <fstream>
++
++// From flatcc's runtime (linked via etdump); frees buffers returned by
++// flatcc_builder_finalize_aligned_buffer() with the matching deallocator.
++extern "C" void flatcc_builder_aligned_free(void* p);
+ #include <memory>
+ #include <numeric>
+ static uint8_t method_allocator_pool[4 * 1024U * 1024U]; // 4 MB
+@@ -729,10 +733,14 @@ int main(int argc, char** argv) {
+         "Write etdump to %s, Size = %zu",
+         FLAGS_etdump_path.c_str(),
+         result.size);
+-    FILE* f = fopen(FLAGS_etdump_path.c_str(), "w+");
++    // Binary mode: text mode on Windows expands 0x0A to 0x0D 0x0A and corrupts
++    // the flatbuffer.
++    FILE* f = fopen(FLAGS_etdump_path.c_str(), "wb");
+     fwrite((uint8_t*)result.buf, 1, result.size, f);
+     fclose(f);
+-    free(result.buf);
++    // The buffer comes from flatcc_builder_finalize_aligned_buffer(), which is
++    // _aligned_malloc on MSVC; plain free() corrupts the heap there.
++    flatcc_builder_aligned_free(result.buf);
+   }
+ 
+   if (FLAGS_dump_intermediate_outputs) {

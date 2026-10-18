@@ -1,0 +1,924 @@
+W1017 16:10:34.788000 17692 .venv\Lib\site-packages\torch\utils\_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+[INFO 2026-10-17 16:10:37,151 __init__.py:20] libquantized_ops_aot_lib is not loaded
+[INFO 2026-10-17 16:10:39,827 export_utils.py:181] Using parser's config
+[INFO 2026-10-17 16:10:39,827 qnn_sdk_setup.py:60] [QNN] Using QNN SDK at C:\Qualcomm\AIStack\QAIRT\2.37.0.250724 (from QNN_SDK_ROOT)
+[INFO 2026-10-17 16:10:40,248 model.py:41] loading deeplabv3_resnet101 model
+[INFO 2026-10-17 16:10:41,227 model.py:45] loaded deeplabv3_resnet101 model
+[WARNING 2026-10-17 16:10:42,914 backend_opinfo_adapter.py:98] The backend_opinfo module couldn't be imported, so the abstract implementation will be used instead. This might be because the QNN SDK could not be set up, because $QNN_SDK_ROOT/lib/python isn't included in your PYTHONPATH, or because the `BackendOpInfo` API isn't available in your QNN SDK version. Note that the `BackendOpInfo` API is supported starting from QNN SDK 2.41 and above.
+[WARNING 2026-10-17 16:10:43,376 pass_manager.py:82] PassManager is deprecated. Please use ExportedProgramPassManager instead.
+[WARNING 2026-10-17 16:12:06,371 pass_manager.py:82] PassManager is deprecated. Please use ExportedProgramPassManager instead.
+[INFO] [Qnn ExecuTorch]: Creating new backend bundle.
+[INFO] [Qnn ExecuTorch]: create QNN Logger with log_level 1
+[WARNING 2026-10-17 16:12:12,973 _program.py:1032] Op aten.unbind.int was requested for preservation by partitioner.  This request is ignored because it aliases output.
+[WARNING 2026-10-17 16:12:16,654 _program.py:1032] Op aten.unbind.int was requested for preservation by partitioner.  This request is ignored because it aliases output.
+[INFO 2026-10-17 16:12:34,955 qnn_partitioner.py:136] [QnnPartitioner] aten.upsample_bilinear2d.vec | True
+[INFO 2026-10-17 16:12:34,967 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:34,972 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:34,982 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:34,982 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:34,984 qnn_partitioner.py:136] [QnnPartitioner] aten.upsample_bilinear2d.vec | True
+[INFO 2026-10-17 16:12:34,988 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:34,990 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,000 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,000 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,002 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,013 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,013 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,019 qnn_partitioner.py:136] [QnnPartitioner] aten.cat.default | True
+[INFO 2026-10-17 16:12:35,021 qnn_partitioner.py:136] [QnnPartitioner] aten.upsample_bilinear2d.vec | True
+[INFO 2026-10-17 16:12:35,021 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,031 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,031 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,035 qnn_partitioner.py:136] [QnnPartitioner] aten.adaptive_avg_pool2d.default | True
+[INFO 2026-10-17 16:12:35,035 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,045 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,045 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,047 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,056 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,056 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,058 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,068 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,068 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,068 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,078 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,078 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,080 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,084 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,123 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,123 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,125 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,139 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,139 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,141 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,155 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,155 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,157 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,159 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,196 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,196 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,198 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,212 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,212 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,214 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,226 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,226 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,228 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,231 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,280 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,280 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,327 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,327 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,327 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,343 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,343 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,343 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,362 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,362 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,363 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,366 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,383 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,383 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,390 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,390 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,390 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,390 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,406 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,406 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,406 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,406 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,421 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,437 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,438 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,438 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,438 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,438 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,453 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,453 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,453 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,453 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,489 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,489 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,491 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,501 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,501 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,503 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,511 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,511 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,513 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,515 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,537 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,537 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,539 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,548 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,548 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,550 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,564 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,564 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,566 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,568 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,590 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,590 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,592 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,600 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,602 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,602 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,611 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,611 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,613 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,615 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,641 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,641 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,641 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,651 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,651 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,653 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,663 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,663 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,665 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,667 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,688 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,689 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,689 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,699 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,699 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,701 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,712 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,712 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,714 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,716 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,739 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,739 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,739 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,748 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,748 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,750 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,762 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,762 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,764 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,766 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,788 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,788 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,790 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,798 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,798 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,800 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,810 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,810 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,812 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,814 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,835 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,835 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,837 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,847 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,847 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,847 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,857 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,857 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,859 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,861 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,883 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,883 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,884 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,894 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,894 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,896 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,904 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,904 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,906 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,908 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,931 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,931 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,932 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,941 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,943 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,943 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,954 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,954 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,956 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,959 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:35,981 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,981 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,983 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:35,993 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:35,993 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:35,995 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,003 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,003 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,005 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,007 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,030 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,030 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,030 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,040 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,040 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,042 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,052 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,052 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,053 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,055 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,078 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,078 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,080 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,089 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,089 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,091 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,101 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,101 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,101 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,105 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,126 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,126 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,128 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,137 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,137 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,139 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,148 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,148 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,150 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,152 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,173 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,173 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,176 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,186 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,186 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,188 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,197 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,197 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,199 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,201 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,222 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,222 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,224 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,232 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,234 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,236 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,246 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,246 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,246 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,250 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,272 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,272 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,272 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,282 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,282 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,284 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,293 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,293 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,295 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,297 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,319 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,319 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,321 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,330 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,330 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,332 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,340 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,340 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,342 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,344 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,366 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,366 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,368 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,377 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,377 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,379 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,389 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,389 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,389 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,393 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,414 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,414 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,416 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,426 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,426 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,426 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,436 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,436 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,438 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,440 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,463 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,463 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,484 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,484 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,486 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,496 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,496 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,498 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,508 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,508 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,510 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,512 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,526 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,526 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,528 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,536 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,536 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,538 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,546 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,546 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,548 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,550 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,571 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,571 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,571 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,581 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,581 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,582 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,582 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,582 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,582 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,582 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,602 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,602 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,602 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,617 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,617 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,619 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,627 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,627 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,629 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,631 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,646 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,646 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,660 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,660 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,661 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,677 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,677 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,677 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,693 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,693 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,693 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,693 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,708 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,708 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,715 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,718 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,718 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,724 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,724 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,724 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,724 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,724 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,740 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,740 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,740 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,740 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,740 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,740 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,758 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,758 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,758 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,758 qnn_partitioner.py:136] [QnnPartitioner] aten.add.Tensor | True
+[INFO 2026-10-17 16:12:36,771 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,771 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,784 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,784 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,785 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,790 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,790 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,790 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,790 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,790 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,790 qnn_partitioner.py:102] [QnnPartitioner] getitem | Forced Passed
+[INFO 2026-10-17 16:12:36,803 qnn_partitioner.py:136] [QnnPartitioner] aten.max_pool2d_with_indices.default | True
+[INFO 2026-10-17 16:12:36,811 qnn_partitioner.py:136] [QnnPartitioner] aten.constant_pad_nd.default | True
+[INFO 2026-10-17 16:12:36,814 qnn_partitioner.py:136] [QnnPartitioner] aten.relu.default | True
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:136] [QnnPartitioner] aten.convolution.default | True
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,822 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,824 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,826 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,828 qnn_partitioner.py:102] [QnnPartitioner] quantized_decomposed.dequantize_per_channel.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,830 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,832 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,834 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,836 qnn_partitioner.py:102] [QnnPartitioner] aten._to_copy.default | Forced Passed
+[INFO 2026-10-17 16:12:36,840 qnn_partitioner.py:223] Qnn partitioner will delegate torch mutable buffer with the same I/O address during the runtime, so if your model contains mutable buffer, then you can get the better performance with skip_mutable_buffer=False. If you encounter accuracy issue during the runtime, then please set `skip_mutable_buffer=True` and try again.
+[INFO] [Qnn ExecuTorch]: Initialize Qnn backend parameters for Qnn executorch backend type 2
+[INFO] [Qnn ExecuTorch]: Caching: Caching is in SAVE MODE.
+[INFO] [Qnn ExecuTorch]: Running level=3 optimization.
+[INFO 2026-10-17 16:12:39,224 qnn_preprocess.py:230] Processing Method(0): (1/1)
+[WARNING 2026-10-17 16:12:39,225 pass_manager.py:82] PassManager is deprecated. Please use ExportedProgramPassManager instead.
+[INFO 2026-10-17 16:12:40,213 qnn_preprocess.py:122] Visiting: quantized_decomposed_quantize_per_tensor_default, quantized_decomposed.quantize_per_tensor.default
+[INFO 2026-10-17 16:12:40,214 qnn_preprocess.py:122] Visiting: aten_permute_copy_default, aten.permute_copy.default
+[INFO 2026-10-17 16:12:40,216 qnn_preprocess.py:122] Visiting: aten_convolution_default, aten.convolution.default
+[INFO 2026-10-17 16:12:40,223 qnn_preprocess.py:122] Visiting: aten_relu_default, aten.relu.default
+[INFO 2026-10-17 16:12:40,225 qnn_preprocess.py:122] Visiting: aten_constant_pad_nd_default, aten.constant_pad_nd.default
+[INFO 2026-10-17 16:12:40,227 qnn_preprocess.py:122] Visiting: aten_max_pool2d_with_indices_default, aten.max_pool2d_with_indices.default
+[INFO 2026-10-17 16:12:40,227 qnn_preprocess.py:122] Visiting: getitem, getitem
+[INFO 2026-10-17 16:12:40,227 qnn_preprocess.py:122] Visiting: aten_convolution_default_1, aten.convolution.default
+[INFO 2026-10-17 16:12:40,230 qnn_preprocess.py:122] Visiting: aten_relu_default_1, aten.relu.default
+[INFO 2026-10-17 16:12:40,230 qnn_preprocess.py:122] Visiting: aten_convolution_default_2, aten.convolution.default
+[INFO 2026-10-17 16:12:40,255 qnn_preprocess.py:122] Visiting: aten_relu_default_2, aten.relu.default
+[INFO 2026-10-17 16:12:40,257 qnn_preprocess.py:122] Visiting: aten_convolution_default_3, aten.convolution.default
+[INFO 2026-10-17 16:12:40,269 qnn_preprocess.py:122] Visiting: aten_convolution_default_4, aten.convolution.default
+[INFO 2026-10-17 16:12:40,279 qnn_preprocess.py:122] Visiting: aten_add_tensor, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,281 qnn_preprocess.py:122] Visiting: aten_relu_default_3, aten.relu.default
+[INFO 2026-10-17 16:12:40,283 qnn_preprocess.py:122] Visiting: aten_convolution_default_5, aten.convolution.default
+[INFO 2026-10-17 16:12:40,288 qnn_preprocess.py:122] Visiting: aten_relu_default_4, aten.relu.default
+[INFO 2026-10-17 16:12:40,290 qnn_preprocess.py:122] Visiting: aten_convolution_default_6, aten.convolution.default
+[INFO 2026-10-17 16:12:40,296 qnn_preprocess.py:122] Visiting: aten_relu_default_5, aten.relu.default
+[INFO 2026-10-17 16:12:40,298 qnn_preprocess.py:122] Visiting: aten_convolution_default_7, aten.convolution.default
+[INFO 2026-10-17 16:12:40,309 qnn_preprocess.py:122] Visiting: aten_add_tensor_1, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,310 qnn_preprocess.py:122] Visiting: aten_relu_default_6, aten.relu.default
+[INFO 2026-10-17 16:12:40,312 qnn_preprocess.py:122] Visiting: aten_convolution_default_8, aten.convolution.default
+[INFO 2026-10-17 16:12:40,319 qnn_preprocess.py:122] Visiting: aten_relu_default_7, aten.relu.default
+[INFO 2026-10-17 16:12:40,319 qnn_preprocess.py:122] Visiting: aten_convolution_default_9, aten.convolution.default
+[INFO 2026-10-17 16:12:40,326 qnn_preprocess.py:122] Visiting: aten_relu_default_8, aten.relu.default
+[INFO 2026-10-17 16:12:40,326 qnn_preprocess.py:122] Visiting: aten_convolution_default_10, aten.convolution.default
+[INFO 2026-10-17 16:12:40,336 qnn_preprocess.py:122] Visiting: aten_add_tensor_2, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,338 qnn_preprocess.py:122] Visiting: aten_relu_default_9, aten.relu.default
+[INFO 2026-10-17 16:12:40,340 qnn_preprocess.py:122] Visiting: aten_convolution_default_11, aten.convolution.default
+[INFO 2026-10-17 16:12:40,349 qnn_preprocess.py:122] Visiting: aten_relu_default_10, aten.relu.default
+[INFO 2026-10-17 16:12:40,350 qnn_preprocess.py:122] Visiting: aten_convolution_default_12, aten.convolution.default
+[INFO 2026-10-17 16:12:40,358 qnn_preprocess.py:122] Visiting: aten_relu_default_11, aten.relu.default
+[INFO 2026-10-17 16:12:40,359 qnn_preprocess.py:122] Visiting: aten_convolution_default_13, aten.convolution.default
+[INFO 2026-10-17 16:12:40,374 qnn_preprocess.py:122] Visiting: aten_convolution_default_14, aten.convolution.default
+[INFO 2026-10-17 16:12:40,389 qnn_preprocess.py:122] Visiting: aten_add_tensor_3, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,391 qnn_preprocess.py:122] Visiting: aten_relu_default_12, aten.relu.default
+[INFO 2026-10-17 16:12:40,393 qnn_preprocess.py:122] Visiting: aten_convolution_default_15, aten.convolution.default
+[INFO 2026-10-17 16:12:40,399 qnn_preprocess.py:122] Visiting: aten_relu_default_13, aten.relu.default
+[INFO 2026-10-17 16:12:40,401 qnn_preprocess.py:122] Visiting: aten_convolution_default_16, aten.convolution.default
+[INFO 2026-10-17 16:12:40,409 qnn_preprocess.py:122] Visiting: aten_relu_default_14, aten.relu.default
+[INFO 2026-10-17 16:12:40,411 qnn_preprocess.py:122] Visiting: aten_convolution_default_17, aten.convolution.default
+[INFO 2026-10-17 16:12:40,425 qnn_preprocess.py:122] Visiting: aten_add_tensor_4, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,429 qnn_preprocess.py:122] Visiting: aten_relu_default_15, aten.relu.default
+[INFO 2026-10-17 16:12:40,429 qnn_preprocess.py:122] Visiting: aten_convolution_default_18, aten.convolution.default
+[INFO 2026-10-17 16:12:40,437 qnn_preprocess.py:122] Visiting: aten_relu_default_16, aten.relu.default
+[INFO 2026-10-17 16:12:40,439 qnn_preprocess.py:122] Visiting: aten_convolution_default_19, aten.convolution.default
+[INFO 2026-10-17 16:12:40,447 qnn_preprocess.py:122] Visiting: aten_relu_default_17, aten.relu.default
+[INFO 2026-10-17 16:12:40,449 qnn_preprocess.py:122] Visiting: aten_convolution_default_20, aten.convolution.default
+[INFO 2026-10-17 16:12:40,464 qnn_preprocess.py:122] Visiting: aten_add_tensor_5, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,465 qnn_preprocess.py:122] Visiting: aten_relu_default_18, aten.relu.default
+[INFO 2026-10-17 16:12:40,467 qnn_preprocess.py:122] Visiting: aten_convolution_default_21, aten.convolution.default
+[INFO 2026-10-17 16:12:40,475 qnn_preprocess.py:122] Visiting: aten_relu_default_19, aten.relu.default
+[INFO 2026-10-17 16:12:40,475 qnn_preprocess.py:122] Visiting: aten_convolution_default_22, aten.convolution.default
+[INFO 2026-10-17 16:12:40,483 qnn_preprocess.py:122] Visiting: aten_relu_default_20, aten.relu.default
+[INFO 2026-10-17 16:12:40,485 qnn_preprocess.py:122] Visiting: aten_convolution_default_23, aten.convolution.default
+[INFO 2026-10-17 16:12:40,501 qnn_preprocess.py:122] Visiting: aten_add_tensor_6, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,502 qnn_preprocess.py:122] Visiting: aten_relu_default_21, aten.relu.default
+[INFO 2026-10-17 16:12:40,504 qnn_preprocess.py:122] Visiting: aten_convolution_default_24, aten.convolution.default
+[INFO 2026-10-17 16:12:40,513 qnn_preprocess.py:122] Visiting: aten_relu_default_22, aten.relu.default
+[INFO 2026-10-17 16:12:40,515 qnn_preprocess.py:122] Visiting: aten_convolution_default_25, aten.convolution.default
+[INFO 2026-10-17 16:12:40,525 qnn_preprocess.py:122] Visiting: aten_relu_default_23, aten.relu.default
+[INFO 2026-10-17 16:12:40,527 qnn_preprocess.py:122] Visiting: aten_convolution_default_26, aten.convolution.default
+[INFO 2026-10-17 16:12:40,552 qnn_preprocess.py:122] Visiting: aten_convolution_default_27, aten.convolution.default
+[INFO 2026-10-17 16:12:40,578 qnn_preprocess.py:122] Visiting: aten_add_tensor_7, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,580 qnn_preprocess.py:122] Visiting: aten_relu_default_24, aten.relu.default
+[INFO 2026-10-17 16:12:40,582 qnn_preprocess.py:122] Visiting: aten_convolution_default_28, aten.convolution.default
+[INFO 2026-10-17 16:12:40,590 qnn_preprocess.py:122] Visiting: aten_relu_default_25, aten.relu.default
+[INFO 2026-10-17 16:12:40,592 qnn_preprocess.py:122] Visiting: aten_convolution_default_29, aten.convolution.default
+[INFO 2026-10-17 16:12:40,603 qnn_preprocess.py:122] Visiting: aten_relu_default_26, aten.relu.default
+[INFO 2026-10-17 16:12:40,605 qnn_preprocess.py:122] Visiting: aten_convolution_default_30, aten.convolution.default
+[INFO 2026-10-17 16:12:40,629 qnn_preprocess.py:122] Visiting: aten_add_tensor_8, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,631 qnn_preprocess.py:122] Visiting: aten_relu_default_27, aten.relu.default
+[INFO 2026-10-17 16:12:40,633 qnn_preprocess.py:122] Visiting: aten_convolution_default_31, aten.convolution.default
+[INFO 2026-10-17 16:12:40,643 qnn_preprocess.py:122] Visiting: aten_relu_default_28, aten.relu.default
+[INFO 2026-10-17 16:12:40,645 qnn_preprocess.py:122] Visiting: aten_convolution_default_32, aten.convolution.default
+[INFO 2026-10-17 16:12:40,655 qnn_preprocess.py:122] Visiting: aten_relu_default_29, aten.relu.default
+[INFO 2026-10-17 16:12:40,657 qnn_preprocess.py:122] Visiting: aten_convolution_default_33, aten.convolution.default
+[INFO 2026-10-17 16:12:40,681 qnn_preprocess.py:122] Visiting: aten_add_tensor_9, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,683 qnn_preprocess.py:122] Visiting: aten_relu_default_30, aten.relu.default
+[INFO 2026-10-17 16:12:40,685 qnn_preprocess.py:122] Visiting: aten_convolution_default_34, aten.convolution.default
+[INFO 2026-10-17 16:12:40,695 qnn_preprocess.py:122] Visiting: aten_relu_default_31, aten.relu.default
+[INFO 2026-10-17 16:12:40,697 qnn_preprocess.py:122] Visiting: aten_convolution_default_35, aten.convolution.default
+[INFO 2026-10-17 16:12:40,708 qnn_preprocess.py:122] Visiting: aten_relu_default_32, aten.relu.default
+[INFO 2026-10-17 16:12:40,709 qnn_preprocess.py:122] Visiting: aten_convolution_default_36, aten.convolution.default
+[INFO 2026-10-17 16:12:40,734 qnn_preprocess.py:122] Visiting: aten_add_tensor_10, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,736 qnn_preprocess.py:122] Visiting: aten_relu_default_33, aten.relu.default
+[INFO 2026-10-17 16:12:40,738 qnn_preprocess.py:122] Visiting: aten_convolution_default_37, aten.convolution.default
+[INFO 2026-10-17 16:12:40,748 qnn_preprocess.py:122] Visiting: aten_relu_default_34, aten.relu.default
+[INFO 2026-10-17 16:12:40,748 qnn_preprocess.py:122] Visiting: aten_convolution_default_38, aten.convolution.default
+[INFO 2026-10-17 16:12:40,758 qnn_preprocess.py:122] Visiting: aten_relu_default_35, aten.relu.default
+[INFO 2026-10-17 16:12:40,760 qnn_preprocess.py:122] Visiting: aten_convolution_default_39, aten.convolution.default
+[INFO 2026-10-17 16:12:40,785 qnn_preprocess.py:122] Visiting: aten_add_tensor_11, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,787 qnn_preprocess.py:122] Visiting: aten_relu_default_36, aten.relu.default
+[INFO 2026-10-17 16:12:40,787 qnn_preprocess.py:122] Visiting: aten_convolution_default_40, aten.convolution.default
+[INFO 2026-10-17 16:12:40,799 qnn_preprocess.py:122] Visiting: aten_relu_default_37, aten.relu.default
+[INFO 2026-10-17 16:12:40,799 qnn_preprocess.py:122] Visiting: aten_convolution_default_41, aten.convolution.default
+[INFO 2026-10-17 16:12:40,811 qnn_preprocess.py:122] Visiting: aten_relu_default_38, aten.relu.default
+[INFO 2026-10-17 16:12:40,813 qnn_preprocess.py:122] Visiting: aten_convolution_default_42, aten.convolution.default
+[INFO 2026-10-17 16:12:40,836 qnn_preprocess.py:122] Visiting: aten_add_tensor_12, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,838 qnn_preprocess.py:122] Visiting: aten_relu_default_39, aten.relu.default
+[INFO 2026-10-17 16:12:40,840 qnn_preprocess.py:122] Visiting: aten_convolution_default_43, aten.convolution.default
+[INFO 2026-10-17 16:12:40,850 qnn_preprocess.py:122] Visiting: aten_relu_default_40, aten.relu.default
+[INFO 2026-10-17 16:12:40,852 qnn_preprocess.py:122] Visiting: aten_convolution_default_44, aten.convolution.default
+[INFO 2026-10-17 16:12:40,863 qnn_preprocess.py:122] Visiting: aten_relu_default_41, aten.relu.default
+[INFO 2026-10-17 16:12:40,865 qnn_preprocess.py:122] Visiting: aten_convolution_default_45, aten.convolution.default
+[INFO 2026-10-17 16:12:40,888 qnn_preprocess.py:122] Visiting: aten_add_tensor_13, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,890 qnn_preprocess.py:122] Visiting: aten_relu_default_42, aten.relu.default
+[INFO 2026-10-17 16:12:40,893 qnn_preprocess.py:122] Visiting: aten_convolution_default_46, aten.convolution.default
+[INFO 2026-10-17 16:12:40,902 qnn_preprocess.py:122] Visiting: aten_relu_default_43, aten.relu.default
+[INFO 2026-10-17 16:12:40,904 qnn_preprocess.py:122] Visiting: aten_convolution_default_47, aten.convolution.default
+[INFO 2026-10-17 16:12:40,915 qnn_preprocess.py:122] Visiting: aten_relu_default_44, aten.relu.default
+[INFO 2026-10-17 16:12:40,915 qnn_preprocess.py:122] Visiting: aten_convolution_default_48, aten.convolution.default
+[INFO 2026-10-17 16:12:40,940 qnn_preprocess.py:122] Visiting: aten_add_tensor_14, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,943 qnn_preprocess.py:122] Visiting: aten_relu_default_45, aten.relu.default
+[INFO 2026-10-17 16:12:40,945 qnn_preprocess.py:122] Visiting: aten_convolution_default_49, aten.convolution.default
+[INFO 2026-10-17 16:12:40,955 qnn_preprocess.py:122] Visiting: aten_relu_default_46, aten.relu.default
+[INFO 2026-10-17 16:12:40,956 qnn_preprocess.py:122] Visiting: aten_convolution_default_50, aten.convolution.default
+[INFO 2026-10-17 16:12:40,966 qnn_preprocess.py:122] Visiting: aten_relu_default_47, aten.relu.default
+[INFO 2026-10-17 16:12:40,968 qnn_preprocess.py:122] Visiting: aten_convolution_default_51, aten.convolution.default
+[INFO 2026-10-17 16:12:40,992 qnn_preprocess.py:122] Visiting: aten_add_tensor_15, aten.add.Tensor
+[INFO 2026-10-17 16:12:40,994 qnn_preprocess.py:122] Visiting: aten_relu_default_48, aten.relu.default
+[INFO 2026-10-17 16:12:40,996 qnn_preprocess.py:122] Visiting: aten_convolution_default_52, aten.convolution.default
+[INFO 2026-10-17 16:12:41,006 qnn_preprocess.py:122] Visiting: aten_relu_default_49, aten.relu.default
+[INFO 2026-10-17 16:12:41,008 qnn_preprocess.py:122] Visiting: aten_convolution_default_53, aten.convolution.default
+[INFO 2026-10-17 16:12:41,020 qnn_preprocess.py:122] Visiting: aten_relu_default_50, aten.relu.default
+[INFO 2026-10-17 16:12:41,021 qnn_preprocess.py:122] Visiting: aten_convolution_default_54, aten.convolution.default
+[INFO 2026-10-17 16:12:41,046 qnn_preprocess.py:122] Visiting: aten_add_tensor_16, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,046 qnn_preprocess.py:122] Visiting: aten_relu_default_51, aten.relu.default
+[INFO 2026-10-17 16:12:41,050 qnn_preprocess.py:122] Visiting: aten_convolution_default_55, aten.convolution.default
+[INFO 2026-10-17 16:12:41,060 qnn_preprocess.py:122] Visiting: aten_relu_default_52, aten.relu.default
+[INFO 2026-10-17 16:12:41,062 qnn_preprocess.py:122] Visiting: aten_convolution_default_56, aten.convolution.default
+[INFO 2026-10-17 16:12:41,071 qnn_preprocess.py:122] Visiting: aten_relu_default_53, aten.relu.default
+[INFO 2026-10-17 16:12:41,073 qnn_preprocess.py:122] Visiting: aten_convolution_default_57, aten.convolution.default
+[INFO 2026-10-17 16:12:41,098 qnn_preprocess.py:122] Visiting: aten_add_tensor_17, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,100 qnn_preprocess.py:122] Visiting: aten_relu_default_54, aten.relu.default
+[INFO 2026-10-17 16:12:41,102 qnn_preprocess.py:122] Visiting: aten_convolution_default_58, aten.convolution.default
+[INFO 2026-10-17 16:12:41,112 qnn_preprocess.py:122] Visiting: aten_relu_default_55, aten.relu.default
+[INFO 2026-10-17 16:12:41,114 qnn_preprocess.py:122] Visiting: aten_convolution_default_59, aten.convolution.default
+[INFO 2026-10-17 16:12:41,124 qnn_preprocess.py:122] Visiting: aten_relu_default_56, aten.relu.default
+[INFO 2026-10-17 16:12:41,126 qnn_preprocess.py:122] Visiting: aten_convolution_default_60, aten.convolution.default
+[INFO 2026-10-17 16:12:41,151 qnn_preprocess.py:122] Visiting: aten_add_tensor_18, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,153 qnn_preprocess.py:122] Visiting: aten_relu_default_57, aten.relu.default
+[INFO 2026-10-17 16:12:41,155 qnn_preprocess.py:122] Visiting: aten_convolution_default_61, aten.convolution.default
+[INFO 2026-10-17 16:12:41,166 qnn_preprocess.py:122] Visiting: aten_relu_default_58, aten.relu.default
+[INFO 2026-10-17 16:12:41,167 qnn_preprocess.py:122] Visiting: aten_convolution_default_62, aten.convolution.default
+[INFO 2026-10-17 16:12:41,176 qnn_preprocess.py:122] Visiting: aten_relu_default_59, aten.relu.default
+[INFO 2026-10-17 16:12:41,178 qnn_preprocess.py:122] Visiting: aten_convolution_default_63, aten.convolution.default
+[INFO 2026-10-17 16:12:41,203 qnn_preprocess.py:122] Visiting: aten_add_tensor_19, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,205 qnn_preprocess.py:122] Visiting: aten_relu_default_60, aten.relu.default
+[INFO 2026-10-17 16:12:41,207 qnn_preprocess.py:122] Visiting: aten_convolution_default_64, aten.convolution.default
+[INFO 2026-10-17 16:12:41,217 qnn_preprocess.py:122] Visiting: aten_relu_default_61, aten.relu.default
+[INFO 2026-10-17 16:12:41,219 qnn_preprocess.py:122] Visiting: aten_convolution_default_65, aten.convolution.default
+[INFO 2026-10-17 16:12:41,229 qnn_preprocess.py:122] Visiting: aten_relu_default_62, aten.relu.default
+[INFO 2026-10-17 16:12:41,231 qnn_preprocess.py:122] Visiting: aten_convolution_default_66, aten.convolution.default
+[INFO 2026-10-17 16:12:41,256 qnn_preprocess.py:122] Visiting: aten_add_tensor_20, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,258 qnn_preprocess.py:122] Visiting: aten_relu_default_63, aten.relu.default
+[INFO 2026-10-17 16:12:41,260 qnn_preprocess.py:122] Visiting: aten_convolution_default_67, aten.convolution.default
+[INFO 2026-10-17 16:12:41,271 qnn_preprocess.py:122] Visiting: aten_relu_default_64, aten.relu.default
+[INFO 2026-10-17 16:12:41,273 qnn_preprocess.py:122] Visiting: aten_convolution_default_68, aten.convolution.default
+[INFO 2026-10-17 16:12:41,283 qnn_preprocess.py:122] Visiting: aten_relu_default_65, aten.relu.default
+[INFO 2026-10-17 16:12:41,284 qnn_preprocess.py:122] Visiting: aten_convolution_default_69, aten.convolution.default
+[INFO 2026-10-17 16:12:41,308 qnn_preprocess.py:122] Visiting: aten_add_tensor_21, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,310 qnn_preprocess.py:122] Visiting: aten_relu_default_66, aten.relu.default
+[INFO 2026-10-17 16:12:41,312 qnn_preprocess.py:122] Visiting: aten_convolution_default_70, aten.convolution.default
+[INFO 2026-10-17 16:12:41,324 qnn_preprocess.py:122] Visiting: aten_relu_default_67, aten.relu.default
+[INFO 2026-10-17 16:12:41,324 qnn_preprocess.py:122] Visiting: aten_convolution_default_71, aten.convolution.default
+[INFO 2026-10-17 16:12:41,334 qnn_preprocess.py:122] Visiting: aten_relu_default_68, aten.relu.default
+[INFO 2026-10-17 16:12:41,336 qnn_preprocess.py:122] Visiting: aten_convolution_default_72, aten.convolution.default
+[INFO 2026-10-17 16:12:41,362 qnn_preprocess.py:122] Visiting: aten_add_tensor_22, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,364 qnn_preprocess.py:122] Visiting: aten_relu_default_69, aten.relu.default
+[INFO 2026-10-17 16:12:41,365 qnn_preprocess.py:122] Visiting: aten_convolution_default_73, aten.convolution.default
+[INFO 2026-10-17 16:12:41,376 qnn_preprocess.py:122] Visiting: aten_relu_default_70, aten.relu.default
+[INFO 2026-10-17 16:12:41,378 qnn_preprocess.py:122] Visiting: aten_convolution_default_74, aten.convolution.default
+[INFO 2026-10-17 16:12:41,388 qnn_preprocess.py:122] Visiting: aten_relu_default_71, aten.relu.default
+[INFO 2026-10-17 16:12:41,390 qnn_preprocess.py:122] Visiting: aten_convolution_default_75, aten.convolution.default
+[INFO 2026-10-17 16:12:41,415 qnn_preprocess.py:122] Visiting: aten_add_tensor_23, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,417 qnn_preprocess.py:122] Visiting: aten_relu_default_72, aten.relu.default
+[INFO 2026-10-17 16:12:41,419 qnn_preprocess.py:122] Visiting: aten_convolution_default_76, aten.convolution.default
+[INFO 2026-10-17 16:12:41,429 qnn_preprocess.py:122] Visiting: aten_relu_default_73, aten.relu.default
+[INFO 2026-10-17 16:12:41,431 qnn_preprocess.py:122] Visiting: aten_convolution_default_77, aten.convolution.default
+[INFO 2026-10-17 16:12:41,441 qnn_preprocess.py:122] Visiting: aten_relu_default_74, aten.relu.default
+[INFO 2026-10-17 16:12:41,443 qnn_preprocess.py:122] Visiting: aten_convolution_default_78, aten.convolution.default
+[INFO 2026-10-17 16:12:41,467 qnn_preprocess.py:122] Visiting: aten_add_tensor_24, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,469 qnn_preprocess.py:122] Visiting: aten_relu_default_75, aten.relu.default
+[INFO 2026-10-17 16:12:41,471 qnn_preprocess.py:122] Visiting: aten_convolution_default_79, aten.convolution.default
+[INFO 2026-10-17 16:12:41,482 qnn_preprocess.py:122] Visiting: aten_relu_default_76, aten.relu.default
+[INFO 2026-10-17 16:12:41,484 qnn_preprocess.py:122] Visiting: aten_convolution_default_80, aten.convolution.default
+[INFO 2026-10-17 16:12:41,494 qnn_preprocess.py:122] Visiting: aten_relu_default_77, aten.relu.default
+[INFO 2026-10-17 16:12:41,496 qnn_preprocess.py:122] Visiting: aten_convolution_default_81, aten.convolution.default
+[INFO 2026-10-17 16:12:41,519 qnn_preprocess.py:122] Visiting: aten_add_tensor_25, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,523 qnn_preprocess.py:122] Visiting: aten_relu_default_78, aten.relu.default
+[INFO 2026-10-17 16:12:41,523 qnn_preprocess.py:122] Visiting: aten_convolution_default_82, aten.convolution.default
+[INFO 2026-10-17 16:12:41,535 qnn_preprocess.py:122] Visiting: aten_relu_default_79, aten.relu.default
+[INFO 2026-10-17 16:12:41,535 qnn_preprocess.py:122] Visiting: aten_convolution_default_83, aten.convolution.default
+[INFO 2026-10-17 16:12:41,547 qnn_preprocess.py:122] Visiting: aten_relu_default_80, aten.relu.default
+[INFO 2026-10-17 16:12:41,549 qnn_preprocess.py:122] Visiting: aten_convolution_default_84, aten.convolution.default
+[INFO 2026-10-17 16:12:41,573 qnn_preprocess.py:122] Visiting: aten_add_tensor_26, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,575 qnn_preprocess.py:122] Visiting: aten_relu_default_81, aten.relu.default
+[INFO 2026-10-17 16:12:41,577 qnn_preprocess.py:122] Visiting: aten_convolution_default_85, aten.convolution.default
+[INFO 2026-10-17 16:12:41,589 qnn_preprocess.py:122] Visiting: aten_relu_default_82, aten.relu.default
+[INFO 2026-10-17 16:12:41,589 qnn_preprocess.py:122] Visiting: aten_convolution_default_86, aten.convolution.default
+[INFO 2026-10-17 16:12:41,601 qnn_preprocess.py:122] Visiting: aten_relu_default_83, aten.relu.default
+[INFO 2026-10-17 16:12:41,602 qnn_preprocess.py:122] Visiting: aten_convolution_default_87, aten.convolution.default
+[INFO 2026-10-17 16:12:41,627 qnn_preprocess.py:122] Visiting: aten_add_tensor_27, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,629 qnn_preprocess.py:122] Visiting: aten_relu_default_84, aten.relu.default
+[INFO 2026-10-17 16:12:41,631 qnn_preprocess.py:122] Visiting: aten_convolution_default_88, aten.convolution.default
+[INFO 2026-10-17 16:12:41,641 qnn_preprocess.py:122] Visiting: aten_relu_default_85, aten.relu.default
+[INFO 2026-10-17 16:12:41,641 qnn_preprocess.py:122] Visiting: aten_convolution_default_89, aten.convolution.default
+[INFO 2026-10-17 16:12:41,652 qnn_preprocess.py:122] Visiting: aten_relu_default_86, aten.relu.default
+[INFO 2026-10-17 16:12:41,654 qnn_preprocess.py:122] Visiting: aten_convolution_default_90, aten.convolution.default
+[INFO 2026-10-17 16:12:41,678 qnn_preprocess.py:122] Visiting: aten_add_tensor_28, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,682 qnn_preprocess.py:122] Visiting: aten_relu_default_87, aten.relu.default
+[INFO 2026-10-17 16:12:41,682 qnn_preprocess.py:122] Visiting: aten_convolution_default_91, aten.convolution.default
+[INFO 2026-10-17 16:12:41,692 qnn_preprocess.py:122] Visiting: aten_relu_default_88, aten.relu.default
+[INFO 2026-10-17 16:12:41,694 qnn_preprocess.py:122] Visiting: aten_convolution_default_92, aten.convolution.default
+[INFO 2026-10-17 16:12:41,706 qnn_preprocess.py:122] Visiting: aten_relu_default_89, aten.relu.default
+[INFO 2026-10-17 16:12:41,706 qnn_preprocess.py:122] Visiting: aten_convolution_default_93, aten.convolution.default
+[INFO 2026-10-17 16:12:41,732 qnn_preprocess.py:122] Visiting: aten_add_tensor_29, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,734 qnn_preprocess.py:122] Visiting: aten_relu_default_90, aten.relu.default
+[INFO 2026-10-17 16:12:41,736 qnn_preprocess.py:122] Visiting: aten_convolution_default_94, aten.convolution.default
+[INFO 2026-10-17 16:12:41,749 qnn_preprocess.py:122] Visiting: aten_relu_default_91, aten.relu.default
+[INFO 2026-10-17 16:12:41,751 qnn_preprocess.py:122] Visiting: aten_convolution_default_95, aten.convolution.default
+[INFO 2026-10-17 16:12:41,768 qnn_preprocess.py:122] Visiting: aten_relu_default_92, aten.relu.default
+[INFO 2026-10-17 16:12:41,769 qnn_preprocess.py:122] Visiting: aten_convolution_default_96, aten.convolution.default
+[INFO 2026-10-17 16:12:41,815 qnn_preprocess.py:122] Visiting: aten_convolution_default_97, aten.convolution.default
+[INFO 2026-10-17 16:12:41,860 qnn_preprocess.py:122] Visiting: aten_add_tensor_30, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,862 qnn_preprocess.py:122] Visiting: aten_relu_default_93, aten.relu.default
+[INFO 2026-10-17 16:12:41,864 qnn_preprocess.py:122] Visiting: aten_convolution_default_98, aten.convolution.default
+[INFO 2026-10-17 16:12:41,880 qnn_preprocess.py:122] Visiting: aten_relu_default_94, aten.relu.default
+[INFO 2026-10-17 16:12:41,881 qnn_preprocess.py:122] Visiting: aten_convolution_default_99, aten.convolution.default
+[INFO 2026-10-17 16:12:41,896 qnn_preprocess.py:122] Visiting: aten_relu_default_95, aten.relu.default
+[INFO 2026-10-17 16:12:41,898 qnn_preprocess.py:122] Visiting: aten_convolution_default_100, aten.convolution.default
+[INFO 2026-10-17 16:12:41,942 qnn_preprocess.py:122] Visiting: aten_add_tensor_31, aten.add.Tensor
+[INFO 2026-10-17 16:12:41,944 qnn_preprocess.py:122] Visiting: aten_relu_default_96, aten.relu.default
+[INFO 2026-10-17 16:12:41,946 qnn_preprocess.py:122] Visiting: aten_convolution_default_101, aten.convolution.default
+[INFO 2026-10-17 16:12:41,962 qnn_preprocess.py:122] Visiting: aten_relu_default_97, aten.relu.default
+[INFO 2026-10-17 16:12:41,964 qnn_preprocess.py:122] Visiting: aten_convolution_default_102, aten.convolution.default
+[INFO 2026-10-17 16:12:41,980 qnn_preprocess.py:122] Visiting: aten_relu_default_98, aten.relu.default
+[INFO 2026-10-17 16:12:41,982 qnn_preprocess.py:122] Visiting: aten_convolution_default_103, aten.convolution.default
+[INFO 2026-10-17 16:12:42,025 qnn_preprocess.py:122] Visiting: aten_add_tensor_32, aten.add.Tensor
+[INFO 2026-10-17 16:12:42,029 qnn_preprocess.py:122] Visiting: aten_relu_default_99, aten.relu.default
+[INFO 2026-10-17 16:12:42,029 qnn_preprocess.py:122] Visiting: aten_convolution_default_104, aten.convolution.default
+[INFO 2026-10-17 16:12:42,041 qnn_preprocess.py:122] Visiting: aten_relu_default_100, aten.relu.default
+[INFO 2026-10-17 16:12:42,043 qnn_preprocess.py:122] Visiting: aten_convolution_default_105, aten.convolution.default
+[INFO 2026-10-17 16:12:42,057 qnn_preprocess.py:122] Visiting: aten_relu_default_101, aten.relu.default
+[INFO 2026-10-17 16:12:42,059 qnn_preprocess.py:122] Visiting: aten_convolution_default_106, aten.convolution.default
+[INFO 2026-10-17 16:12:42,071 qnn_preprocess.py:122] Visiting: aten_relu_default_102, aten.relu.default
+[INFO 2026-10-17 16:12:42,074 qnn_preprocess.py:122] Visiting: aten_convolution_default_107, aten.convolution.default
+[INFO 2026-10-17 16:12:42,087 qnn_preprocess.py:122] Visiting: aten_relu_default_103, aten.relu.default
+[INFO 2026-10-17 16:12:42,089 qnn_preprocess.py:122] Visiting: aten_adaptive_avg_pool2d_default, aten.adaptive_avg_pool2d.default
+[INFO 2026-10-17 16:12:42,091 qnn_preprocess.py:122] Visiting: aten_convolution_default_108, aten.convolution.default
+[INFO 2026-10-17 16:12:42,100 qnn_preprocess.py:122] Visiting: aten_relu_default_104, aten.relu.default
+[INFO 2026-10-17 16:12:42,102 qnn_preprocess.py:122] Visiting: aten_upsample_bilinear2d_vec, aten.upsample_bilinear2d.vec
+[INFO 2026-10-17 16:12:42,102 qnn_preprocess.py:122] Visiting: aten_cat_default, aten.cat.default
+[INFO 2026-10-17 16:12:42,106 qnn_preprocess.py:122] Visiting: aten_convolution_default_109, aten.convolution.default
+[INFO 2026-10-17 16:12:42,116 qnn_preprocess.py:122] Visiting: aten_relu_default_105, aten.relu.default
+[INFO 2026-10-17 16:12:42,119 qnn_preprocess.py:122] Visiting: aten_convolution_default_110, aten.convolution.default
+[INFO 2026-10-17 16:12:42,129 qnn_preprocess.py:122] Visiting: aten_relu_default_106, aten.relu.default
+[INFO 2026-10-17 16:12:42,131 qnn_preprocess.py:122] Visiting: aten_convolution_default_111, aten.convolution.default
+[INFO 2026-10-17 16:12:42,136 qnn_preprocess.py:122] Visiting: aten_upsample_bilinear2d_vec_1, aten.upsample_bilinear2d.vec
+[INFO 2026-10-17 16:12:42,137 qnn_preprocess.py:122] Visiting: aten_permute_copy_default_1, aten.permute_copy.default
+[INFO 2026-10-17 16:12:42,139 qnn_preprocess.py:122] Visiting: quantized_decomposed_dequantize_per_tensor_default, quantized_decomposed.dequantize_per_tensor.default
+[INFO 2026-10-17 16:12:42,139 qnn_preprocess.py:122] Visiting: aten_convolution_default_112, aten.convolution.default
+[INFO 2026-10-17 16:12:42,151 qnn_preprocess.py:122] Visiting: aten_relu_default_107, aten.relu.default
+[INFO 2026-10-17 16:12:42,153 qnn_preprocess.py:122] Visiting: aten_convolution_default_113, aten.convolution.default
+[INFO 2026-10-17 16:12:42,158 qnn_preprocess.py:122] Visiting: aten_upsample_bilinear2d_vec_2, aten.upsample_bilinear2d.vec
+[INFO 2026-10-17 16:12:42,160 qnn_preprocess.py:122] Visiting: aten_permute_copy_default_2, aten.permute_copy.default
+[INFO 2026-10-17 16:12:42,162 qnn_preprocess.py:122] Visiting: quantized_decomposed_dequantize_per_tensor_default_1, quantized_decomposed.dequantize_per_tensor.default
+Starting stage: Graph Preparation Initializing
+Completed stage: Graph Preparation Initializing (4241 us)
+Starting stage: Graph Transformations and Optimizations
+Completed stage: Graph Transformations and Optimizations (1334043 us)
+Starting stage: Graph Sequencing for Target
+ [                                                  ]   0% [#                                                 ]   2% [##                                                ]   4% [###                                               ]   6% [####                                              ]   8% [#####                                             ]  10% [######                                            ]  12% [#######                                           ]  14% [########                                          ]  16% [#########                                         ]  18% [##########                                        ]  20% [###########                                       ]  22% [############                                      ]  24% [#############                                     ]  26% [##############                                    ]  28% [###############                                   ]  30% [################                                  ]  32% [#################                                 ]  34% [##################                                ]  36% [###################                               ]  38% [####################                              ]  40% [#####################                             ]  42% [######################                            ]  44% [#######################                           ]  46% [########################                          ]  48% [#########################                         ]  50% [##########################                        ]  52% [###########################                       ]  54% [############################                      ]  56% [#############################                     ]  58% [##############################                    ]  60% [###############################                   ]  62% [################################                  ]  64% [#################################                 ]  66% [##################################                ]  68% [###################################               ]  70% [####################################              ]  72% [#####################################             ]  74% [######################################            ]  76% [#######################################           ]  78% [########################################          ]  80% [#########################################         ]  82% [##########################################        ]  84% [###########################################       ]  86% [############################################      ]  88% [#############################################     ]  90% [##############################################    ]  92% [###############################################   ]  94% [################################################  ]  96% [################################################# ]  98% [##################################################] 100%
+ [                                                  ]   0% [#                                                 ]   2% [##                                                ]   4% [###                                               ]   6% [####                                              ]   8% [#####                                             ]  10% [######                                            ]  12% [#######                                           ]  14% [########                                          ]  16% [#########                                         ]  18% [##########                                        ]  20% [###########                                       ]  22% [############                                      ]  24% [#############                                     ]  26% [##############                                    ]  28% [###############                                   ]  30% [################                                  ]  32% [#################                                 ]  34% [##################                                ]  36% [###################                               ]  38% [####################                              ]  40% [#####################                             ]  42% [######################                            ]  44% [#######################                           ]  46% [########################                          ]  48% [#########################                         ]  50% [##########################                        ]  52% [###########################                       ]  54% [############################                      ]  56% [#############################                     ]  58% [##############################                    ]  60% [###############################                   ]  62% [################################                  ]  64% [#################################                 ]  66% [##################################                ]  68% [###################################               ]  70% [####################################              ]  72% [#####################################             ]  74% [######################################            ]  76% [#######################################           ]  78% [########################################          ]  80% [#########################################         ]  82% [##########################################        ]  84% [###########################################       ]  86% [############################################      ]  88% [#############################################     ]  90% [##############################################    ]  92% [###############################################   ]  94% [################################################  ]  96% [################################################# ]  98% [##################################################] 100%
+Completed stage: Graph Sequencing for Target (1109137 us)
+Starting stage: VTCM Allocation
+Completed stage: VTCM Allocation (46752 us)
+Starting stage: Parallelization Optimization
+ [                                                  ]   0% [#                                                 ]   2% [##                                                ]   4% [###                                               ]   6% [####                                              ]   8% [#####                                             ]  10% [######                                            ]  12% [#######                                           ]  14% [########                                          ]  16% [#########                                         ]  18% [##########                                        ]  20% [###########                                       ]  22% [############                                      ]  24% [#############                                     ]  26% [##############                                    ]  28% [###############                                   ]  30% [################                                  ]  32% [#################                                 ]  34% [##################                                ]  36% [###################                               ]  38% [####################                              ]  40% [#####################                             ]  42% [######################                            ]  44% [#######################                           ]  46% [########################                          ]  48% [#########################                         ]  50% [##########################                        ]  52% [###########################                       ]  54% [############################                      ]  56% [#############################                     ]  58% [##############################                    ]  60% [###############################                   ]  62% [################################                  ]  64% [#################################                 ]  66% [##################################                ]  68% [###################################               ]  70% [####################################              ]  72% [#####################################             ]  74% [######################################            ]  76% [#######################################           ]  78% [########################################          ]  80% [#########################################         ]  82% [##########################################        ]  84% [###########################################       ]  86% [############################################      ]  88% [#############################################     ]  90% [##############################################    ]  92% [###############################################   ]  94% [################################################  ]  96% [################################################# ]  98% [##################################################] 100%
+Completed stage: Parallelization Optimization (148592 us)
+Starting stage: Finalizing Graph Sequence
+
+====== DDR bandwidth summary ======
+spill_bytes=6553600
+fill_bytes=6553600
+write_total_bytes=14983168
+read_total_bytes=68526080
+
+Completed stage: Finalizing Graph Sequence (14030 us)
+Starting stage: Completion
+Completed stage: Completion (3039 us)
+[INFO] [Qnn ExecuTorch]: Destroy Qnn context
+[WARNING 2026-10-17 16:12:45,069 _program.py:1032] Op aten.unbind.int was requested for preservation by partitioner.  This request is ignored because it aliases output.
+[INFO] [Qnn ExecuTorch]: Destroy Qnn device
+[INFO] [Qnn ExecuTorch]: Destroy Qnn backend
+No quant config is implemented for op, aten.dropout.default
+No quant config is implemented for op, aten.dropout.default
+Quantizing(PTQ) the model...

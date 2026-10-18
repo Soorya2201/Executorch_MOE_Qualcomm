@@ -1,0 +1,20 @@
+# Models, compiled programs, tensors and profiles
+*.pte
+*.ptd
+*.raw
+*.etdp
+*.safetensors
+*.bin
+*.pth
+*.pt
+
+# Qualcomm SDK binaries (redistribution is governed by Qualcomm's license)
+*.dll
+*.so
+*.cat
+*.exe
+
+# Datasets and caches
+voc_image/
+__pycache__/
+.venv/

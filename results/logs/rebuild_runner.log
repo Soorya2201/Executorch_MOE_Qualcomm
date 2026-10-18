@@ -1,0 +1,8 @@
+'vswhere.exe' is not recognized as an internal or external command,
+operable program or batch file.
+MSBuild version 17.14.60+43b635718 for .NET Framework
+
+  full_portable_ops_lib.vcxproj -> C:\et\executorch\build-arm64-windows\examples\qualcomm\Release\full_portable_ops_lib.lib
+  qnn_executor_runner.cpp
+LINK : warning LNK4044: unrecognized option '/Wl,-rpath='$ORIGIN''; ignored [C:\et\executorch\build-arm64-windows\examples\qualcomm\executor_runner\qnn_executor_runner.vcxproj]
+  qnn_executor_runner.vcxproj -> C:\et\executorch\build-arm64-windows\examples\qualcomm\executor_runner\Release\qnn_executor_runner.exe

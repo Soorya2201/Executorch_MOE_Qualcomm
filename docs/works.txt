@@ -1,0 +1,191 @@
+EXECUTORCH ON THE SNAPDRAGON X ELITE NPU: WHAT WAS DONE AND WHY
+=================================================================
+Machine : Dell Latitude 7455, Snapdragon X Elite X1E80100, 32 GB RAM, Windows 11 ARM64
+NPU     : Qualcomm Hexagon NPU, HTP v73, ExecuTorch target SC8380XP
+          NPU driver 30.0.219.1000 (dated 2025-08-11)
+Guide   : https://github.com/aaishikasb/qc-executorch-guide (Compute track)
+Date    : 2026-10-17
+
+RESULT
+------
+DeepLab v3 (INT8 / 8a8w) runs on the NPU through ExecuTorch:
+  - 6.75 ms per image (about 148 images/s). Sustained and burst modes give the same time.
+  - 93.0% pixel accuracy and 64.7% mIoU on 20 VOC 2012 val images.
+    (Optimistic: calibration used 100 random val images, so some test images may overlap.)
+  - Evidence it really ran on the NPU:
+      * Inspector: Method::execute = 6.788 ms, DELEGATE_CALL (QNN/HTP) = 6.787 ms.
+        No CPU operator events.
+      * Windows "GPU Engine" counter: a compute-only adapter (luid ...DD9D), separate
+        from the Adreno GPU (luid ...DAA8), at 100% utilization during the runs.
+  - Runner exits cleanly (exit 0) after the crash fix below.
+
+
+1. SOFTWARE INSTALLED
+---------------------
+  Git 2.55 (ARM64)                     winget, user scope
+  CMake 4.4.4 (ARM64)                  winget, user scope
+  Python 3.12.10 (x64 / AMD64)         winget, user scope
+      The guide requires x64 Python. Some export (AOT) dependencies don't
+      ship ARM64 wheels, so it runs under x64 emulation.
+  Visual Studio 2022 Build Tools       winget. Components: VC tools, ARM64 and x64 MSVC,
+                                       Windows 11 SDK 26100, VC CMake, Clang/LLVM
+  Qualcomm QAIRT / QNN SDK 2.37.0.250724
+      Location : C:\Qualcomm\AIStack\QAIRT\2.37.0.250724
+      Why 2.37 : it matches ExecuTorch v1.5.1's backends/qualcomm/scripts/qnn_config.sh.
+                 The main branch pins 2.50; that download was stopped and not used.
+      Download : C:\Qualcomm-dl\v2.37.0.250724.zip (1.35 GB, can be deleted)
+  ExecuTorch v1.5.1, commit 3b60683923245cf472b7323426920e15623ba361
+      Location : C:\et\executorch (cloned with submodules and symlinks)
+      Python env: C:\et\executorch\.venv (x64 Python 3.12, torch 2.14.0+cpu)
+  Ollama 0.40.5 (native ARM64)         winget. UNINSTALLED 2026-10-17 at the user's request
+      (ExecuTorch only from now on). Removed: the program, %LOCALAPPDATA%\Ollama,
+      %USERPROFILE%\.ollama (gemma4:26b-a4b-it-qat, 15 GB), the startup shortcut and the
+      user PATH entry. About 16.4 GB freed.
+
+2. SYSTEM SETTINGS CHANGED
+--------------------------
+  - Windows Developer Mode: ON (the user switched it on). Needed for git symlinks.
+  - git config --global core.longpaths true
+  - Page file: changed from system-managed (2 GB) to C:\pagefile.sys 16384-65536 MB.
+      Registry: HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PagingFiles
+      Win32_ComputerSystem.AutomaticManagedPagefile = False
+      Why: LLM export needs a lot of RAM (the README warns hybrid mode can need 80-100 GB).
+      TAKES EFFECT ONLY AFTER A REBOOT.
+      To undo: Settings > System > About > Advanced system settings > Performance >
+               Advanced > Virtual memory > "Automatically manage".
+
+3. FILES CREATED
+----------------
+  C:\et\et-env.ps1          Environment script. Run it with:  . C:\et\et-env.ps1
+                            Sets EXECUTORCH_ROOT and QNN_SDK_ROOT, runs QNN envsetup,
+                            puts the x64 QNN DLLs on PATH, sets PYTHONPATH and the CMake
+                            generator settings, and activates the venv.
+  C:\et\scripts\prep_deeplab_inputs.py   VOC images -> raw float32 inputs + input_list.txt
+  C:\et\scripts\score_deeplab.py         Scores NPU outputs (pixel accuracy / mIoU)
+  C:\et\scripts\inspect_etdump.py        Prints ETDump events (shows delegate vs CPU time)
+  C:\et\executorch\xelite-run\           Ready-to-run NPU bundle:
+        qnn_executor_runner.exe (ARM64, fixed)   qnn_executor_runner.exe.orig (old, crashes)
+        qnn_executorch_backend.dll (ARM64)       dlv3_qnn.pte (58.9 MB, SC8380XP)
+        QnnHtp.dll, QnnSystem.dll, QnnHtpV73Stub.dll (ARM64, QAIRT 2.37)
+        libQnnHtpV73Skel.so + v73 .cat files (Hexagon DSP side)
+        input_list.txt, inputs\ (20 VOC images), outputs\
+  Logs: C:\et\install_executorch.log, build_qnn.log, export_deeplab.log, rebuild_runner.log
+
+4. PROBLEMS HIT AND HOW EACH WAS FIXED
+-------------------------------------
+  (a) QAIRT download truncated (777 MB instead of 1.35 GB; "End of Central Directory").
+      Fix: resumed with curl.exe -C - (HTTP range), then checked the archive with tar -tf.
+
+  (b) My mistake: deleted the extracted SDK. Windows treats "qairt" and "QAIRT" as the
+      same folder. Fix: extracted again from the zip.
+
+  (c) install_executorch.py failed: "unknown type name 'uint'" in vec128_uint_aarch64.h.
+      Cause: on an ARM64 host the Visual Studio generator defaults to ARM64, so the C++
+      part of the Python package built for ARM64 while Python is x64.
+      Fix: CMAKE_GENERATOR="Visual Studio 17 2022" and CMAKE_GENERATOR_PLATFORM=x64
+      (CMake ignores the platform setting unless the generator is also set).
+      Clear both before running build.ps1, which passes -G/-A itself.
+
+  (d) build.ps1 died on a harmless gflags CMake deprecation warning.
+      Cause: PowerShell 5.1 turns native stderr into terminating errors when the output is
+      piped (*>&1 | Tee-Object) and the script uses $ErrorActionPreference='Stop'.
+      Fix: run it in a child process with cmd /c "... > log 2>&1".
+
+  (e) DeepLab export: ModuleNotFoundError: pydot.
+      Cause: install_executorch.py doesn't install backends\qualcomm\requirements.txt.
+      Fix: pip install -r backends\qualcomm\requirements.txt pandas
+
+  (f) DeepLab export: "Failed to initialize QNN backend for kHtpBackend".
+      Cause: QNN's envsetup.ps1 puts the host shell's (ARM64) DLLs on PATH, but the x64
+      Python export can only load the x86_64-windows-msvc QnnHtp.dll.
+      Fix: et-env.ps1 removes the aarch64 QNN paths and adds lib\ and bin\x86_64-windows-msvc.
+      (The ARM64 runner uses its own copies next to it in xelite-run.)
+
+  (g) RUNNER CRASH ON EXIT, fixed in source. Details in section 5.
+
+5. THE RUNNER CRASH: WHERE AND WHY
+----------------------------------
+  Symptom : qnn_executor_runner.exe finished every inference, wrote its outputs and
+            "Write etdump ... Size = 3384", then died.
+            Windows Event Log (Application Error 1000):
+              faulting module ntdll.dll, 0xC0000374 STATUS_HEAP_CORRUPTION (offset 0x1115b8)
+              and once 0xC0000409 (fail-fast)
+  Where   : examples\qualcomm\executor_runner\qnn_executor_runner.cpp, end of main():
+              FILE* f = fopen(FLAGS_etdump_path.c_str(), "w+");   // bug 2
+              fwrite(result.buf, 1, result.size, f);
+              fclose(f);
+              free(result.buf);                                   // bug 1
+  Bug 1 (the crash):
+            result.buf comes from flatcc_builder_finalize_aligned_buffer(). On MSVC,
+            flatcc implements aligned allocation as _aligned_malloc
+            (third-party\flatcc\include\flatcc\portable\paligned_alloc.h:121-123,
+            "Aligned _aligned_malloc is not compatible with free"). Plain free() on that
+            pointer corrupts the heap, and ntdll detects it -> 0xC0000374.
+            On Linux/Android the allocator is posix_memalign, where free() is correct.
+            That's why this only crashes on Windows.
+  Bug 2 (silent data corruption):
+            "w+" is TEXT mode on Windows, so every 0x0A byte is written as 0x0D 0x0A.
+            Evidence: the log said 3384 bytes, the file had 3388 bytes with exactly 4 CRLF
+            pairs. This is why the ExecuTorch Inspector couldn't parse the profile.
+  Fix     : fopen(..., "wb") and flatcc_builder_aligned_free(result.buf)
+            (+ an extern "C" declaration; the function is in flatcc's runtime, linked via etdump)
+  Verified: load test, profile_level 2 and the 10+100-iteration benchmark all exit 0;
+            ETDump size on disk == logged size (3384/3384, 343464/343464); no new crash
+            events; accuracy unchanged; Inspector now reads the profile.
+  Scope   : only qnn_executor_runner.cpp has this pattern. The LLM runners don't.
+  Note    : this is a local patch to upstream v1.5.1. Re-apply it if ExecuTorch is
+            re-cloned (worth reporting upstream).
+
+6. HOW TO RUN AGAIN
+-------------------
+  NPU inference (no environment script needed):
+    cd C:\et\executorch\xelite-run
+    .\qnn_executor_runner.exe --model_path .\dlv3_qnn.pte --input_list_path .\input_list.txt `
+        --output_folder_path .\outputs --warm_up 10 --iteration 100 --htp_performance_mode 1
+    (Per-inference latency = the per-input "avg" lines. The final "Total ... avg" averages
+     over inputs, so divide it by --iteration.)
+  Export / Python work:
+    . C:\et\et-env.ps1
+  (Ollama has been removed. The section 7 Gemma 4 26B-A4B results are kept for reference only.)
+
+7. TEST RESULTS (2026-10-17, after the runner fix)
+--------------------------------------------------
+  Test script: C:\et\scripts\test_npu_runner.ps1   logs: C:\et\tests\
+  NPU runner (DeepLab v3, xelite-run):
+    PASS  real inputs, 20 images            exit 0, 20 inferences, 40 output files
+    PASS  sustained benchmark (10+100)      exit 0, 6.76 ms/inference (min 6.74, max 6.79)
+    PASS  profiling --profile_level 2       exit 0, ETDump logged 3384 = on disk 3384
+    PASS  no input list                     exit 0, runs on default inputs (smoke test only)
+    PASS  run from another folder           exit 0, QNN DLLs found next to the exe
+          - needs a WRITABLE working dir: it writes inference_speed.txt there
+            (from C:\ it aborts with "Error saving the inference speed file")
+    FOUND output folder missing             exit 0 but NO outputs written (silent).
+          Create --output_folder_path before running.
+    OK    missing .pte / wrong input size   clear "F ... assert failed" message, then abort()
+          -> exit 0xC0000409. That's how MSVC abort() exits (__fastfail), an intended fatal
+          stop, not memory corruption. Apps must check for exit code != 0.
+    OK    corrupt .pte                      "Failed to parse model file", exit 1
+  Export environment (x64 Python):
+    PASS  win-amd64, torch 2.14.0+cpu, PyQnnManagerAdaptor loads, SC8380XP -> chipset 60
+  Gemma 4 26B-A4B in Ollama (gemma4:26b-a4b-it-qat, num_ctx 4096):
+    PASS  text   load 17.7 s; prompt 42.8 tok/s; generation 23.8 tok/s
+          (612 tokens generated for a 3-bullet answer: Gemma 4's hidden "thinking")
+    PASS  image  correctly saw an aeroplane (VOC 2007_000033), but said 1 plane where
+          the ground truth has 3. Image encoding about 56 s on the CPU; 21.7 tok/s after that.
+    NOTE  `ollama ps` = 100% CPU: Ollama's ARM64 build does NOT use the Adreno GPU or the NPU.
+          Only about 4 GB RAM was free while loaded.
+
+8. NEXT / IN PROGRESS
+---------------------
+  - Gemma 4 E2B weights: huggingface_hub's downloader produced 0-byte files and then
+    stalled (Xet backend, and also with HF_HUB_DISABLE_XET=1). Downloaded the 10.25 GB
+    model.safetensors with curl.exe (resumable) straight into the HF cache blob.
+    DONE: 10,246,621,918 bytes, SHA-256 matches 2db5482b..., linked into the snapshot with
+    mklink (PowerShell's New-Item resolved the relative target against C:\, so it failed).
+    Verified with HF_HUB_OFFLINE=1: snapshot_download(local_files_only=True) finds
+    config, tokenizer and weights; the checkpoint has 2011 tensors.
+    NEXT: reboot (activates the page file), then export.
+  - Gemma 4 E2B on the NPU: export after the reboot (so the 16-64 GB page file is active), in kv mode with
+    --embedding-quantize 4,32, then run with qnn_llama_runner.exe (ARM64, already built).
+  - Optional: Llama 3 8B on the NPU via qaihub_llama3_8b_runner.exe (already built), using
+    Qualcomm AI Hub's precompiled context binaries (needs a free AI Hub account).

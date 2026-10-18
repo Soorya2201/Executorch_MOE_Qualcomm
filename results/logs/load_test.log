@@ -1,0 +1,79 @@
+I 00:00:00.001355 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:335] Model file .\dlv3_qnn.pte is loaded.
+I 00:00:00.001608 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:345] Using method forward
+I 00:00:00.001629 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:392] Setting up planned buffer 0, size 9031680.
+[INFO] [Qnn ExecuTorch]: Deserializing processed data using QnnContextCustomProtocol
+[INFO] [Qnn ExecuTorch]: Creating new backend bundle.
+[INFO] [Qnn ExecuTorch]: create QNN Logger with log_level 1
+[INFO] [Qnn ExecuTorch]: Initialize Qnn backend parameters for Qnn executorch backend type 2
+[INFO] [Qnn ExecuTorch]: Caching: Caching is in RESTORE MODE.
+[INFO] [Qnn ExecuTorch]: QnnContextCustomProtocol expected magic number: 0x5678abcd but get: 0x2000000
+[INFO] [Qnn ExecuTorch]: Running level=1 optimization.
+I 00:00:01.154922 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:416] Method loaded.
+E 00:00:01.155429 executorch:C:\et\executorch\runtime\executor\method.cpp:1381] Output 0 is memory planned, or is a constant. Cannot override the existing data pointer.
+I 00:00:01.155434 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:476] ignoring error from set_output_data_ptr(): 0x2
+E 00:00:01.155865 executorch:C:\et\executorch\runtime\executor\method.cpp:1381] Output 1 is memory planned, or is a constant. Cannot override the existing data pointer.
+I 00:00:01.155868 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:476] ignoring error from set_output_data_ptr(): 0x2
+I 00:00:01.155870 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:479] Inputs prepared.
+I 00:00:01.156962 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:485] Number of inputs: 1
+I 00:00:01.157391 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.157396 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (0)
+I 00:00:01.165163 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 7.764000 ms, avg 7.764000 ms
+I 00:00:01.168023 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.168027 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (1)
+I 00:00:01.174793 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.763000 ms, avg 6.763000 ms
+I 00:00:01.178496 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.178511 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (2)
+I 00:00:01.185290 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.775000 ms, avg 6.775000 ms
+I 00:00:01.188100 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.188107 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (3)
+I 00:00:01.194918 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.808000 ms, avg 6.808000 ms
+I 00:00:01.198029 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.198035 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (4)
+I 00:00:01.204912 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.874000 ms, avg 6.874000 ms
+I 00:00:01.208256 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.208263 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (5)
+I 00:00:01.215010 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.745000 ms, avg 6.745000 ms
+I 00:00:01.217947 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.217953 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (6)
+I 00:00:01.224695 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.739000 ms, avg 6.739000 ms
+I 00:00:01.227391 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.227395 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (7)
+I 00:00:01.234126 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.728000 ms, avg 6.728000 ms
+I 00:00:01.236657 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.236661 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (8)
+I 00:00:01.243377 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.713000 ms, avg 6.713000 ms
+I 00:00:01.246685 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.246689 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (9)
+I 00:00:01.253421 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.729000 ms, avg 6.729000 ms
+I 00:00:01.255862 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.255866 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (10)
+I 00:00:01.262607 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.738000 ms, avg 6.738000 ms
+I 00:00:01.265371 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.265375 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (11)
+I 00:00:01.272164 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.786000 ms, avg 6.786000 ms
+I 00:00:01.274536 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.274540 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (12)
+I 00:00:01.281256 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.713000 ms, avg 6.713000 ms
+I 00:00:01.284071 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.284075 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (13)
+I 00:00:01.290784 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.706000 ms, avg 6.706000 ms
+I 00:00:01.293686 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.293690 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (14)
+I 00:00:01.300443 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.736000 ms, avg 6.736000 ms
+I 00:00:01.303248 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.303252 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (15)
+I 00:00:01.310054 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.799000 ms, avg 6.799000 ms
+I 00:00:01.312634 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.312639 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (16)
+I 00:00:01.319394 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.752000 ms, avg 6.752000 ms
+I 00:00:01.322229 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.322233 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (17)
+I 00:00:01.328977 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.741000 ms, avg 6.741000 ms
+I 00:00:01.331331 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.331336 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (18)
+I 00:00:01.338064 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.726000 ms, avg 6.726000 ms
+I 00:00:01.341111 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:598] Perform 0 inference for warming up
+I 00:00:01.341115 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:604] Start inference (19)
+I 00:00:01.347919 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:622] 1 inference took 6.802000 ms, avg 6.802000 ms
+I 00:00:01.349970 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:666] Total 20 inference took 136.137000 ms, avg 6.806850 ms
+I 00:00:01.350907 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:731] Write etdump to etdump.etdp, Size = 3384

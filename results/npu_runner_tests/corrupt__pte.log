@@ -1,0 +1,2 @@
+E 00:00:00.000361 executorch:C:\et\executorch\runtime\executor\program.cpp:172] Program identifier '' != expected 'ET12'
+E 00:00:00.000457 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:336] Failed to parse model file C:\et\tests\corrupt.pte

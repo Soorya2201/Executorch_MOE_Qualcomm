@@ -1,0 +1,2 @@
+E 00:00:00.000149 executorch:C:\et\executorch\extension\data_loader\file_data_loader.cpp:111] Failed to open .\nope.pte: No such file or directory (2)
+F 00:00:00.000243 executorch:C:\et\executorch\examples\qualcomm\executor_runner\qnn_executor_runner.cpp:330] In function main(), assert failed (loader.ok()): FileDataLoader::from() failed: 0x22
