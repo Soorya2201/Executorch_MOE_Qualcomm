@@ -47,11 +47,12 @@ and fast enough to take notes while you are still talking.**
 | **12.2 tokens/s** | Phi-4-mini writing speed on the NPU |
 | **5.8× real time** | live speech-to-text: 30 s of audio transcribed in 5.0 s (Whisper-small on the NPU) |
 | **10.1 %** | word error rate, Whisper-small on the NPU (17.1 % for Whisper-tiny) |
+| **~2 %** | CPU use while Whisper transcribes: encoder and decoder are **1 NPU call each, 0 CPU operators** |
 | **1.4 s** | answer time for a short request with the model kept loaded (was 7.3 s when it reloaded every time) |
 | **6.76 ms** | per image, DeepLabV3 segmentation on the NPU (first model brought up on this stack) |
 | **47.9 tokens/s** | Qwen3-0.6B on the NPU (small-model speed reference) |
 | **5.1 GB** | the whole 3.8B-parameter model on disk after 8-bit quantization (about 7.7 GB in bf16) |
-| **47** | automated tests, all passing |
+| **68** | automated tests, all passing |
 
 ## 5. Under the hood: the models and what we did to them
 
@@ -77,7 +78,37 @@ The quantized model keeps math, code, JSON output, summaries and decisions; it l
 questions and sometimes over-assigns action items. That is why every item carries its source quote and the
 app asks the user before saving anything.
 
-## 6. Engineering we had to invent
+## 6. NPU optimizations, one by one
+
+Every step below was made to get more work onto the Hexagon NPU, or to keep it from waiting.
+
+| # | Optimization | What it does | Measured effect |
+|---|---|---|---|
+| 1 | **W8A16 quantization** (Phi-4-mini) | 8-bit weights, 16-bit activations, 8-bit KV cache; calibrated post-training | 7.7 GB → **5.1 GB**, 7/10 vs 10/10 on the test suite, **12.2 tok/s** |
+| 2 | **Whole graph on the NPU** | Every operator is lowered to QNN; nothing falls back to the CPU | Phi: 8 NPU calls, **0 CPU ops**, CPU ~9 %. Whisper: 1 call per encoder/decoder, **0 CPU ops**, CPU ~2 % |
+| 3 | **8 NPU shards with weight sharing** | The 3.8B model is split into 8 context binaries that fit the NPU's memory | Model runs at all on a 32 GB laptop |
+| 4 | **16a8w Whisper** + our own NumPy log-mel | Speech model quantized for the NPU; front end has no PyTorch dependency at runtime | **5.8× real time**, WER 10.1 % |
+| 5 | **Keep-loaded NPU server** (our `--server` patch to the runner) | Model is loaded into the NPU once and stays; requests go over stdin | **7.3 s → 1.4 s** per short request; byte-identical output |
+| 6 | **Warm-up on Record** | The LLM starts loading onto the NPU the moment a meeting starts, so it is ready when you press Stop | Model load is hidden behind the meeting |
+| 7 | **Stay loaded 15 minutes** | The NPU model is kept for 900 s after the last request, then freed | Back-to-back meetings skip the reload; idle laptops get their memory back |
+| 8 | **One NPU at a time** (`NPU_LOCK`) | Whisper and Phi take turns on the NPU instead of fighting over it | No failed loads or stalls while recording and summarizing |
+| 9 | **Context-sized requests** | Transcript chunks and prompts are sized to the model's 2,048-token window; compact prompts for small contexts | No truncated prompts; fewer NPU requests per meeting |
+| 10 | **Hybrid prefill (in progress)** | Adds a graph that reads 32 prompt tokens per NPU step instead of 1 | Prompt reading is ~80 % of meeting time; export blocked by RAM, see below |
+| 11 | **Memory-safe exporter** | Re-ordered so the exporter never holds three copies of the model; frees each stage | Peak: 3 copies → 2 |
+| 12 | **Verified calibration checkpoint** | The slow calibration step is saved once and fingerprint-checked on resume | A crashed export resumes without re-calibrating |
+| 13 | **Clear memory errors** | When the NPU model cannot load, the app says how many GB are free vs needed | No silent "model failed" |
+
+**Where the time goes today** (Phi-4-mini on the NPU, real meetings):
+
+| Task | Time |
+|---|---|
+| Notes + features for a saved meeting | **387 s** (one meeting), 398 s (2,051-character test meeting, 5 requests) |
+| One Ask answer over a whole project | 407 s (prompt reading dominates) |
+| Short request, model loaded | **1.4 s** |
+
+Hybrid prefill (row 10) is the fix for both long times: it attacks exactly the prompt-reading part.
+
+## 7. Engineering we had to invent
 
 - **Windows on ARM did not run ExecuTorch's Qualcomm runners out of the box.** Fixed a heap-corruption
   crash (aligned free), registered the NPU backend in the runner's own registry, and patched Whisper's
@@ -86,9 +117,11 @@ app asks the user before saving anything.
   `--server` mode that loads once and answers requests over stdin, with output **byte-identical** to the
   stock runner: **7.3 s → 1.4 s** per short request.
 - **Fast prompt reading (hybrid mode), in progress.** Phi currently reads prompts one token per NPU step
-  (~10 tokens/s), which is ~80 % of the time per meeting. Hybrid mode adds a graph that reads 128 tokens
+  (~10 tokens/s), which is ~80 % of the time per meeting. Hybrid mode adds a graph that reads many tokens
   per step. Its export needed more than 32 GB RAM + 64 GB page file, so we **re-ordered the exporter to
-  never hold three copies of the model at once** (same quantization, two copies at peak).
+  never hold three copies of the model at once**, added a **verified calibration checkpoint**, and cut the
+  prefill block from 128 to 32 tokens. Calibration now completes; the final QNN compile still runs out of
+  memory (~62 GB resident at that point), so it needs a bigger machine or a smaller model.
 - **A crash in the audio library.** Recording crashed the app at random: the `soundcard` library reserves
   16 bytes for a Windows structure that is 24 bytes on 64-bit, corrupting memory. Found by reproducing it
   outside the app, fixed in our recorder.
@@ -97,7 +130,7 @@ app asks the user before saving anything.
 - **No surprise windows.** Runner processes start without console windows, so live transcription no longer
   flashes a terminal every 30 seconds.
 
-## 7. Privacy and trust, by design
+## 8. Privacy and trust, by design
 
 - Everything (audio, transcripts, notes, the project map, the search index) lives in one local folder.
 - The AI proposes; **the user approves**. Every decision and feature carries a quote from the transcript,
@@ -105,7 +138,7 @@ app asks the user before saving anything.
 - Saves are transactional: a failed save leaves the project exactly as it was.
 - Full transcripts are kept with each saved meeting for reference (one switch to turn that off).
 
-## 8. Design
+## 9. Design
 
 - Built on Microsoft's **Fluent 2** design language: Segoe UI Variable, Fluent brand blue, 4/8 px radii,
   layered soft shadows, line icons, tinted Windows 11 title bar, own taskbar icon.
@@ -114,16 +147,17 @@ app asks the user before saving anything.
 - Fits the laptop's 1280×752 work area (2560×1600 at 200 % scaling); an automatic check renders every
   page at 3 window sizes and fails on any clipped or overlapping text.
 
-## 9. Pending numbers (being measured now)
+## 10. Pending numbers (being measured now)
 
 | What | Status |
 |---|---|
-| Hybrid Phi: prompt-reading speed (tokens/s) | *pending: export running* |
+| Hybrid Phi: prompt-reading speed (tokens/s) | *pending: calibration done and checkpointed; QNN compile needs more RAM* |
 | Hybrid Phi: time to notes for a 2,000-character meeting | *pending* (today: 398 s in 5 requests; target: under a minute) |
 | Hybrid Phi: accuracy on the 10-prompt suite | *pending* (must stay at v1's 7/10) |
-| Whisper + Phi on the NPU at the same time (live notes while recording) | *pending* |
+| Whisper + Phi on the NPU at the same time (live notes while recording) | *serialized by NPU_LOCK; concurrent run pending* |
+| New downloaded model on the NPU: speed vs Phi | *pending: download in progress* |
 
-## 10. Talk track (60 seconds)
+## 11. Talk track (60 seconds)
 
 > "Every meeting ends with decisions, and most of them are forgotten by Friday. Cloud assistants remember
 > them for you, by sending every word to a server. We wanted the opposite.
@@ -143,3 +177,7 @@ app asks the user before saving anything.
 - 2026-10-18: v1 vs v2 vs bf16: 7/10, 7/10, 10/10; v2 10.0 tok/s (kept v1). Live ASR 5.8× real time.
   Keep-loaded server 7.3 s → 1.4 s. Meeting notes before hybrid: 2,051 chars in 398 s (5 requests).
   47 tests passing.
+- 2026-10-18 (later): Whisper delegation verified: encoder + decoder 1 NPU call each, 0 CPU ops, CPU ~2 %,
+  6.0 s for the test clip, WER 12.3 % on our own meeting recording. Real meeting notes: 387 s. Ask: 407 s.
+  Hybrid export: calibration checkpointed, compile out of memory. Review shows only transcript-backed
+  features, at least one per minute of speech. 68 tests passing.
