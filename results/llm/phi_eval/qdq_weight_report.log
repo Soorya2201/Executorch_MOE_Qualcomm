@@ -1,0 +1,48 @@
+loaded the QDQ graph in 85 s
+  ...layer 0
+  ...layer 8
+  ...layer 16
+  ...layer 24
+
+WEIGHTS: 224 quantized to int8 (symmetric, per output channel), compared with the bf16 original
+  SQNR median 40.9 dB, min 36.3 dB, max 41.4 dB (ideal 8-bit with no outliers: ~52.9 dB; each 6 dB ~ 1 bit)
+
+  by weight type:   median SQNR   min SQNR   median outlier ratio   worst outlier ratio
+  wq                 41.0       36.3                3.8                 29.2
+  wk                 40.9       36.7                3.8                 20.4
+  wv                 41.0       40.3                3.8                 17.8
+  wo                 40.7       38.7                3.9                 24.8
+  w1 (gate)          41.1       40.8                3.7                 34.1
+  w3 (up)            41.2       40.6                3.7                 32.0
+  w2 (down)          40.3       38.0                4.1                 38.5
+
+  by layer (min SQNR over its 7 weights):
+  L0:36.3  L1:39.9  L2:39.1  L3:39.6  L4:40.3  L5:40.3  L6:40.0  L7:40.0  L8:40.2  L9:40.3  L10:40.2  L11:40.2  L12:40.1  L13:40.3  L14:40.4  L15:40.4  L16:40.4  L17:40.3  L18:40.1  L19:40.3  L20:40.3  L21:40.4  L22:40.5  L23:40.6  L24:40.7  L25:40.2  L26:40.5  L27:40.5  L28:40.4  L29:39.9  L30:39.3  L31:38.0
+
+  worst 10 weights:
+     36.3 dB  layer  0 wq         worst channel outlier ratio 27.5 (that channel ~24.1 dB)
+     36.7 dB  layer  0 wk         worst channel outlier ratio 18.2 (that channel ~27.7 dB)
+     38.0 dB  layer 31 w2 (down)  worst channel outlier ratio 20.2 (that channel ~26.8 dB)
+     38.5 dB  layer 31 wq         worst channel outlier ratio 16.5 (that channel ~28.6 dB)
+     38.7 dB  layer  0 wo         worst channel outlier ratio 10.2 (that channel ~32.7 dB)
+     38.8 dB  layer 31 wo         worst channel outlier ratio 10.2 (that channel ~32.7 dB)
+     39.1 dB  layer  2 wq         worst channel outlier ratio 29.2 (that channel ~23.6 dB)
+     39.1 dB  layer 31 wk         worst channel outlier ratio 14.5 (that channel ~29.7 dB)
+     39.3 dB  layer 30 wk         worst channel outlier ratio 12.7 (that channel ~30.8 dB)
+     39.3 dB  layer 30 w2 (down)  worst channel outlier ratio 28.5 (that channel ~23.8 dB)
+
+ACTIVATIONS: 2860 quantize points, 16-bit, one scale per tensor
+  range covered: median 24.5, max 5564
+  widest 10 (range, step size, node):
+            5564  step 0.0849  add_123
+            5563  step 0.0849  add_118
+            5563  step 0.0849  add_119
+            5563  step 0.0849  add_114
+            5563  step 0.0849  add_109
+            5563  step 0.0849  add_113
+            5563  step 0.0849  add_128
+            5563  step 0.0849  add_124
+            5563  step 0.0849  add_108
+            5562  step 0.0849  add_104
+
+CSV: C:\et\llm\phi4mini_w8a16_2k\weight_sqnr.csv   (123 s)

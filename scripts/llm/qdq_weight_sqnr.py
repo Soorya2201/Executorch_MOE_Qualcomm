@@ -19,6 +19,17 @@ from pathlib import Path
 
 import torch
 
+# registers torch.ops.quantized_decomposed.* (the module moved to torchao in newer releases)
+try:
+    import torchao.quantization.pt2e._affine_quantization  # noqa: F401
+    import torchao.quantization.quant_primitives  # noqa: F401
+except ImportError:
+    pass
+try:
+    import torch.ao.quantization.fx._decomposed  # noqa: F401
+except ImportError:
+    import torchao.quantization.pt2e.quantizer  # noqa: F401
+
 QPC = torch.ops.quantized_decomposed.quantize_per_channel.default
 DQPC = torch.ops.quantized_decomposed.dequantize_per_channel.default
 QPT = torch.ops.quantized_decomposed.quantize_per_tensor.default

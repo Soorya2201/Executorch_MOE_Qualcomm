@@ -262,21 +262,62 @@ upstream work as your own is the fastest way to lose a senior audience.
   the log.
 - Calibrated on generic encyclopedia text. Meeting-domain calibration text (`build_calib_meeting.py`, prepared) would
   likely help summary quality. **Not yet run.**
+- Wrote the first QDQ analysis assuming float weights in the graph; they were already int8. **Check what the file
+  actually contains** before writing the analysis.
 - Exported on a 32 GB laptop. Large hybrid exports belong on a Linux x64 machine with 128 GB+ RAM; only the
   runtime needs to run on the laptop.
 
 ---
 
-## 9. Open items
+## 9. What the QDQ file taught us (Phi-4-mini W8A16)
+
+`decode_qdq.pt2` (23 GB) is the quantized model *before* NPU compilation: the graph with every quantize and
+dequantize step visible. `scripts/llm/qdq_weight_report.py` compares it with Microsoft's original bf16 weights.
+Full output: `results/llm/phi_eval/qdq_weight_report.log`; one row per weight: `weight_sqnr.csv`.
+
+**How the weights are stored:**
+- int8, symmetric (−127…127, zero point 0), one scale per output channel;
+- 225 tensors: 7 per layer (Q, K, V, O, gate, up, down) × 32 layers, plus the output head.
+
+**SQNR** (signal-to-quantization-noise ratio) measures how much of the original signal survives the rounding. It is
+`10·log10(‖w‖² / ‖w − ŵ‖²)`, and every 6 dB is worth about 1 bit.
+
+| Finding | Number | What it means |
+|---|---|---|
+| Weight SQNR, median over 224 weights | **40.9 dB** (min 36.3, max 41.4) | ≈ **6.8 effective bits** out of 8. An ideal 8-bit weight with no outliers gives ~52.9 dB |
+| Why not 52.9 dB | median channel max/rms ≈ **3.8** | The scale is set by each channel's largest value (`step = max/127`), so outliers waste range: SQNR ≈ 52.9 − 20·log10(max/rms) = 41.3 dB, matching the measurement |
+| Worst layers | **layer 0** (Q 36.3 dB, K 36.7) and **layer 31** (down 38.0, Q 38.5) | The first and last layers are the most outlier-heavy. Classic for LLMs: they are the first candidates for 16-bit weights |
+| Worst single channels | max/rms up to **38.5** (layer 31 down-proj) | Those channels get only ~23-27 dB (≈ 4 bits) |
+| Activations | 2,860 quantize points, 16-bit, **one scale per tensor** | Median range 24.5 |
+| Widest activations | the adds near the end of the network cover **±2,782** (range 5,564) | With one 16-bit scale the step is **0.085**, so values near 0 lose most of their precision. LLMs carry a few huge "massive activation" channels in the residual stream, and per-tensor scaling pays for them in every channel |
+
+**What we concluded:**
+1. **The 8-bit weights are healthy** (~6.8 effective bits, very even across layers 1-30). Going to 16-bit weights
+   everywhere would roughly double the model size for little gain. If anything, only layers 0 and 31 deserve it.
+2. **The bigger suspect is the activations.** Per-tensor 16-bit on residual-stream adds with a ±2,782 range gives a
+   step of 0.085. That plausibly explains the lost reasoning questions better than the weights do. It's a hypothesis:
+   we haven't run the ablation (re-export with those layers at higher precision and re-run the 10-prompt suite).
+3. **Calibration data sets those activation ranges.** We calibrated on 8 encyclopedia texts; meeting-style text
+   (`build_calib_meeting.py`) gives ranges closer to real use.
+4. **Fixes worth trying, in order:**
+   - mixed precision for layers 0 and 31;
+   - rotation-based outlier removal: SpinQuant R1-R3 is built into this pipeline (`r1/r2/r3`, off in our recipe);
+   - meeting-domain calibration.
+
+**How to say it in one line:** "We read the quantized graph against the original weights: the 8-bit weights keep
+about 6.8 bits of signal, the error concentrates in the first and last layers, and the bigger risk is a few huge
+activation outliers that per-tensor scaling has to cover."
+
+## 10. Open items
 
 - Qwen3-1.7B: run the 10-prompt accuracy suite and test Ask with the 8k context.
 - Our own hybrid export (Phi, or Qwen3-1.7B at 8-bit) on a bigger machine.
-- Meeting-domain calibration and a per-layer weight SQNR report (`qdq_weight_sqnr.py`, prepared).
+- Meeting-domain calibration (`build_calib_meeting.py`, prepared) and the precision ablation from section 9.
 - MoE on the QNN backend: design notes only (`docs/moe-pipeline-brainstorm.md`).
 
 ---
 
-## 10. Where everything is (this laptop)
+## 11. Where everything is (this laptop)
 
 | What | Path |
 |---|---|

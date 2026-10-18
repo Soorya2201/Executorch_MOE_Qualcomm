@@ -78,6 +78,9 @@ Windows 11 on ARM.
 | **Phi-4-mini W8A16 on the NPU (v1, shipped)** | **7/10** | **12.2 tok/s** | 7/10 |
 | Phi-4-mini, 16-bit KV cache on the NPU (v2, tried) | 7/10 | 10.0 tok/s | 7/10 |
 
+**Inside the 8-bit weights** (QDQ graph vs the original, 224 weights): median **40.9 dB SQNR ≈ 6.8 effective bits**;
+the error sits in layers 0 and 31; the widest 16-bit activations span ±2,782 (step 0.085).
+
 The quantized model keeps math, code, JSON output, summaries and decisions; it loses two trick reasoning
 questions and sometimes over-assigns action items. That is why every item carries its source quote and the
 app asks the user before saving anything.
@@ -197,4 +200,5 @@ Before the switch (Phi): one real meeting 387 s, one Ask answer 407 s, a short r
   features, at least one per minute of speech. 68 tests passing.
 - 2026-10-18 (evening): switched the meeting model to Qwen3-1.7B (8k, hybrid, QAIRT 2.46): load 2.4 s, prompt
   124 tok/s, decode 12.0 tok/s. Notes: biology 398 s → 134 s, design review 266 s → 47 s, kickoff 162 s → 34 s.
-  Runner patch 0007 (3-D attention mask).
+  Runner patch 0007 (3-D attention mask). QDQ report: Phi weights 40.9 dB median SQNR (≈6.8 bits),
+  worst layers 0 and 31, activation range up to ±2,782.
