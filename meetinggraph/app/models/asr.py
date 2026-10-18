@@ -13,6 +13,8 @@ from pathlib import Path
 
 import numpy as np
 
+from .npu import NPU_LOCK
+
 
 # The app runs under pythonw (no console). Without this flag Windows opens a terminal window for every
 # runner .exe it starts (one per live-transcription batch while recording).
@@ -257,7 +259,8 @@ class ExecuTorchRunnerASR(BaseASR):
 
     def transcribe(self, path: str) -> list[dict]:
         if self.runner:
-            return self._qnn_transcribe(path)
+            with NPU_LOCK:                      # never at the same time as the notes model (live mode)
+                return self._qnn_transcribe(path)
         with tempfile.TemporaryDirectory(prefix="mg_asr_") as td:
             of = Path(td) / "out.json"
             args = [a.replace("{audio_file}", str(path)).replace("{output_file}", str(of)) for a in self.command]

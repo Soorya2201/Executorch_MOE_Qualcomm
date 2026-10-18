@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import re
 
-from ..models.llm import BaseLLM, LLMError
+from ..models.llm import PLACEHOLDER_RE, _skeleton, BaseLLM, LLMError
 from . import heuristic, prompts
 from .transcript import chunk_lines, norm, quote_supported, to_text
 
@@ -123,7 +123,11 @@ def _as_list(x) -> list:
 
 
 def _s(x) -> str:
-    return x.strip() if isinstance(x, str) else ""
+    """A clean string; a JSON-shape placeholder copied back verbatim (e.g. "<one sentence>") counts as empty."""
+    if not isinstance(x, str):
+        return ""
+    x = x.strip()
+    return "" if PLACEHOLDER_RE.fullmatch(x) else x
 
 
 def _num(x) -> float:
@@ -269,6 +273,32 @@ def check_evidence(draft: dict, segments: list[dict]) -> None:
                 e["start"], e["end"] = seg["start"], seg["end"]
 
 
+SMALL_CONTEXT = 4096         # tokens; at or below this the compact feature prompt is used
+CHARS_PER_TOKEN = 3.5       # same conservative estimate as the NPU runner adapter
+NOTES_OUT, FEATURES_OUT = 450, 750
+
+
+def plan_requests(llm: BaseLLM, max_chars: int, existing: str) -> tuple[int, str, dict, int, int]:
+    """Size the transcript chunk to the model's context so the prompt AND a complete answer fit.
+
+    Returns (chunk_chars, features_prompt_template, features_schema, notes_budget, features_budget)."""
+    ctx = getattr(llm, "max_seq_len", None)
+    if not ctx:
+        return max_chars, prompts.FEATURES, prompts.FEATURES_SCHEMA, 1200, 3500
+    compact = ctx <= SMALL_CONTEXT
+    template = prompts.FEATURES_COMPACT if compact else prompts.FEATURES
+    schema = prompts.FEATURES_COMPACT_SCHEMA if compact else prompts.FEATURES_SCHEMA
+    feat_out = FEATURES_OUT if compact else 1500
+    fixed = len(template.format(features=existing, transcript="", max_items=5)) + \
+        len(json.dumps(_skeleton(schema), separators=(",", ":"))) + 120     # + the adapter's JSON instruction
+    fixed_notes = len(prompts.NOTES.format(transcript="")) + \
+        len(json.dumps(_skeleton(prompts.NOTES_SCHEMA), separators=(",", ":"))) + 120
+    usable = ctx - 64                                                     # chat template
+    chars = min(int((usable - feat_out) * CHARS_PER_TOKEN) - fixed,
+                int((usable - NOTES_OUT) * CHARS_PER_TOKEN) - fixed_notes)
+    return max(800, min(max_chars, chars)), template, schema, NOTES_OUT, feat_out
+
+
 def extract_part(llm: BaseLLM, segments: list[dict], existing_titles: list[str],
                  max_chars: int = 6000) -> list[dict]:
     """Notes + features for one stretch of transcript (one part per chunk). Used for whole meetings and
@@ -278,17 +308,19 @@ def extract_part(llm: BaseLLM, segments: list[dict], existing_titles: list[str],
     if llm.heuristic:
         return [heuristic.extract(segments, "")]
     feats = "\n".join(f"- {t}" for t in existing_titles) or "- (none yet)"
+    chunk_chars, feat_template, feat_schema, notes_out, feat_out = plan_requests(llm, max_chars, feats)
     parts = []
     try:
-        for chunk in chunk_lines(to_text(segments), max_chars):
+        for chunk in chunk_lines(to_text(segments), chunk_chars):
             # Two small requests instead of one big one: small models keep short replies intact.
             raws: list[str] = []
             try:
-                notes = _ask_json(llm, prompts.NOTES.format(transcript=chunk), 1200, prompts.NOTES_SCHEMA, raws)
+                notes = _ask_json(llm, prompts.NOTES.format(transcript=chunk), notes_out, prompts.NOTES_SCHEMA,
+                                  raws)
             except ExtractionError:
                 notes = {}
-            found = _ask_json(llm, prompts.FEATURES.format(features=feats, transcript=chunk), 3500,
-                              prompts.FEATURES_SCHEMA, raws)
+            found = _ask_json(llm, feat_template.format(features=feats, transcript=chunk, max_items=5), feat_out,
+                              feat_schema, raws)
             parts.append(_normalize_draft({**notes, "feature_mentions": found.get("feature_mentions", [])}))
     except LLMError as e:
         raise ExtractionError(str(e)) from e

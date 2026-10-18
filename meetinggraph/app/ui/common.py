@@ -50,6 +50,11 @@ class Job(QRunnable):
     def _release(self, *_):
         Job._live.discard(self)
 
+    def run_async(self) -> None:
+        """Run on Qt's global thread pool; results arrive on the GUI thread via on_done/on_error."""
+        from PySide6.QtCore import QThreadPool
+        QThreadPool.globalInstance().start(self)
+
     def run(self):
         try:
             res = self.fn(*self.args)

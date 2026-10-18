@@ -499,6 +499,7 @@ class MainWindow(QMainWindow):
             self.handle_new_meeting(d.result_data)
 
     def handle_new_meeting(self, r: dict):
+        self.ctx.llm.warm_up()                  # notes are about to be made: load the NPU model now
         self.refresh_projects(select=r["project_id"])
         pname = (self.ctx.store.project(r["project_id"]) or {}).get("name", "")
         if r["mode"] in ("paste", "text_file"):

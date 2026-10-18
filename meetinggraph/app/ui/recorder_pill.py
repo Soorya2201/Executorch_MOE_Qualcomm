@@ -17,6 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QGuiApplication, QLinearGradient, QPa
 from PySide6.QtWidgets import QAbstractButton, QHBoxLayout, QLabel, QMessageBox, QVBoxLayout, QWidget
 
 from ..capture import recorder
+from .common import Job
 
 BG = QColor(18, 20, 26, 238)
 EDGE = QColor(255, 255, 255, 28)
@@ -186,7 +187,7 @@ class RecorderPill(QWidget):
         self.ctx = ctx
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setStyleSheet(PILL_QSS)
-        self.setFixedSize(440, 64)
+        self.setFixedSize(460, 64)
         self.rec: recorder.DualRecorder | None = None
         self.sid: str | None = None
         self.project_id: str | None = None
@@ -194,6 +195,7 @@ class RecorderPill(QWidget):
         self.title = "Meeting"
         self._drag: QPoint | None = None
         self.live = None
+        self._starting = False
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(10, 8, 10, 8)
@@ -214,8 +216,8 @@ class RecorderPill(QWidget):
         self.time.setObjectName("time")
         self.state = QLabel("Ready")
         self.state.setObjectName("state")
-        self.time.setFixedWidth(78)
-        self.state.setFixedWidth(78)
+        self.time.setFixedWidth(104)
+        self.state.setFixedWidth(104)
         info.addStretch(1)
         info.addWidget(self.time)
         info.addWidget(self.state)
@@ -322,7 +324,8 @@ class RecorderPill(QWidget):
             b.update()
 
     def _status(self, text: str, tip: str = ""):
-        # elide so it never runs into the close button
+        # elide so it never runs into the close button; measure with the label's styled (smaller) font
+        self.state.ensurePolished()
         self.state.setText(self.state.fontMetrics().elidedText(text, Qt.ElideRight, self.state.width()))
         self.state.setToolTip(tip or text)
 
@@ -331,20 +334,44 @@ class RecorderPill(QWidget):
             self.rec.resume()
             self._set_buttons()
             return
+        if self._starting:
+            return
+        # Opening audio devices takes about a second (longer for Bluetooth): do it off the UI thread so the
+        # window and the capsule keep responding. The UI is updated when the devices are open.
+        self._starting = True
+        self.b_rec.setEnabled(False)
+        self._status("Starting…", "Opening the microphone and the computer's sound")
+        Job(self._open_devices, on_done=self._on_devices_open, on_error=self._on_devices_failed).run_async()
+
+    def _open_devices(self):
+        """Worker thread: find and open the devices, start both tracks. Returns (session, recorder, warnings)."""
         devs = recorder.list_devices()
         if devs.get("error"):
-            self._message(QMessageBox.Warning, "Can't record", f"Recording isn't available on this computer:\n{devs['error']}")
-            return
-        mic, spk = devs.get("default_mic"), devs.get("default_speaker")
+            raise RuntimeError(f"Recording isn't available on this computer:\n{devs['error']}")
         s = self.ctx.sm.create("recording", self.project_id, self.project_name, self.title)
         mic_path, loop_path = self.ctx.sm.recording_paths(s["id"])
         try:
-            rec = recorder.DualRecorder(mic, spk, mic_path, loop_path)
+            rec = recorder.DualRecorder(devs.get("default_mic"), devs.get("default_speaker"), mic_path, loop_path)
             warnings = rec.start()
-        except Exception as e:
+        except Exception:
             self.ctx.sm.discard(s["id"])
-            self._message(QMessageBox.Warning, "Can't record", str(e))
+            raise
+        return s, rec, warnings
+
+    def _on_devices_failed(self, msg: str):
+        self._starting = False
+        self._set_buttons()
+        self._status("Ready", f"{self.title} · {self.project_name}")
+        self._message(QMessageBox.Warning, "Can't record", msg.split(": ", 1)[-1])
+
+    def _on_devices_open(self, res):
+        self._starting = False
+        s, rec, warnings = res
+        if not self.isVisible():                 # closed while the devices were opening
+            rec.stop()
+            self.ctx.sm.discard(s["id"])
             return
+        self.ctx.llm.warm_up()                   # notes are coming: load the NPU model while recording starts
         self.rec, self.sid = rec, s["id"]
         try:
             self.live = self.ctx.sm.start_live(s["id"], rec)      # transcript written every 30 s

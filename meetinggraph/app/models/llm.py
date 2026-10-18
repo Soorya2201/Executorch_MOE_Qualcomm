@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import atexit
 import json
+import re
 import queue
 import subprocess
 import tempfile
@@ -17,6 +18,8 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+from .npu import NPU_LOCK
 
 
 # The app runs under pythonw (no console). Without this flag Windows opens a terminal window for every
@@ -31,6 +34,10 @@ class LLMError(RuntimeError):
 class BaseLLM:
     name = "base"
     heuristic = False
+    max_seq_len: int | None = None      # context window in tokens, when the backend has a small fixed one
+
+    def warm_up(self) -> None:
+        """Prepare the model ahead of a request (no-op unless the backend loads something slow)."""
 
     def __init__(self, label: str = ""):
         self._label = label
@@ -123,16 +130,31 @@ class OllamaLLM(BaseLLM):
         return data.get("response", "")
 
 
-def _skeleton(schema: dict):
-    """Compact example of a JSON schema's shape, e.g. {"summary": "", "decisions": [{"text": "", ...}]}."""
+# What each field should hold, shown to on-device models inside the JSON shape. Empty strings made small
+# models copy the empty value (empty quotes, empty lists); extract.py drops any placeholder copied back as-is.
+PLACEHOLDERS = {
+    "summary": "<2-4 sentences>", "text": "<one sentence>", "quote": "<exact words from the transcript>",
+    "owner": "<name, or empty>", "title": "<1-4 word name>", "description": "<1-2 sentences>",
+    "why": "<one sentence>", "to": "<title of the other item>", "key_points": "<one fact that was said>",
+    "subtasks": "<work still to do>", "folder": "<folder name>", "reason": "<few words>",
+}
+PLACEHOLDER_RE = re.compile(r"<[^<>]{1,60}>")
+
+
+def _skeleton(schema: dict, key: str = ""):
+    """Compact example of a JSON schema's shape with a hint per field, e.g.
+    {"summary": "<2-4 sentences>", "decisions": [{"text": "<one sentence>", ...}]}."""
     t = schema.get("type")
     if t == "object":
-        return {k: _skeleton(v) for k, v in schema.get("properties", {}).items()}
+        return {k: _skeleton(v, k) for k, v in schema.get("properties", {}).items()}
     if t == "array":
-        return [_skeleton(schema.get("items", {}))]
+        return [_skeleton(schema.get("items", {}), key)]
     if t in ("number", "integer"):
         return 0
-    return ""
+    if schema.get("enum"):
+        opts = [e for e in schema["enum"] if e]
+        return "|".join(opts) + (" or empty" if "" in schema["enum"] else "")
+    return PLACEHOLDERS.get(key, f"<{key}>" if key else "<text>")
 
 
 # Chat-template markers written around the reply by qnn_llama_runner (Phi-4, Qwen, Llama 3).
@@ -232,6 +254,18 @@ class _RunnerServer:
             if line.startswith("ERR"):
                 raise LLMError(f"NPU runner: {line[4:]}")
 
+    def warm_up(self) -> None:
+        """Load the model now, in the background, so the next request does not wait for it."""
+        def run():
+            with NPU_LOCK, self.lock:
+                if self.proc is None or self.proc.poll() is not None:
+                    self.last_used = time.monotonic()
+                    try:
+                        self._start()
+                    except LLMError:
+                        pass                 # the real request retries and reports the error
+        threading.Thread(target=run, daemon=True, name="llm-warm-up").start()
+
     def generate(self, prompt: str, seq_len: int, timeout: float) -> str:
         with self.lock:
             self.last_used = time.monotonic()
@@ -312,7 +346,8 @@ class ExecuTorchRunnerLLM(BaseLLM):
         seq_len = prompt_tokens + min(max_tokens, room)
         if self.server is not None:
             t0 = time.perf_counter()
-            text = self.server.generate(prompt, seq_len, self.timeout)
+            with NPU_LOCK:
+                text = self.server.generate(prompt, seq_len, self.timeout)
             self.last_seconds = time.perf_counter() - t0
             return self._reply_only(text)
         with tempfile.TemporaryDirectory(prefix="mg_llm_") as td:
@@ -324,8 +359,9 @@ class ExecuTorchRunnerLLM(BaseLLM):
             t0 = time.perf_counter()
             try:
                 # cwd=td: the runner writes side files into its working directory.
-                p = subprocess.run(args, cwd=td, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=self.timeout,
-                                   encoding="utf-8", errors="replace")
+                with NPU_LOCK:
+                    p = subprocess.run(args, cwd=td, capture_output=True, text=True, creationflags=NO_WINDOW,
+                                       timeout=self.timeout, encoding="utf-8", errors="replace")
             except (OSError, subprocess.TimeoutExpired) as e:
                 raise LLMError(f"NPU runner failed to start or timed out: {e}") from e
             self.last_seconds = time.perf_counter() - t0
@@ -343,6 +379,11 @@ class ExecuTorchRunnerLLM(BaseLLM):
         for marker in _REPLY_END:
             text = text.replace(marker, "")
         return text.strip()
+
+    def warm_up(self) -> None:
+        """Start loading the NPU model in the background (keep-loaded mode only)."""
+        if self.server is not None:
+            self.server.warm_up()
 
     def generate(self, prompt: str, max_tokens: int = 1024, json_mode: bool = False,
                  schema: dict | None = None) -> str:

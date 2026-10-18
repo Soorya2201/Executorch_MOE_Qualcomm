@@ -27,6 +27,7 @@ from .match import build_proposal
 from .transcript import from_text, merge_tracks, to_text
 
 ACTIVE_STAGES = {"transcribing", "summarizing", "saving"}
+MIN_AUDIO_S = 1.0   # a recording with less audio than this (e.g. the app crashed at start) cannot be used
 
 
 class SessionError(RuntimeError):
@@ -121,6 +122,18 @@ class SessionManager:
         dst = self._file(s["id"], f"import{ext}")
         shutil.copy2(src, dst)
         return self._set(s["id"], audio={"import": dst.name})
+
+    def _recorded_seconds(self, sid: str) -> float:
+        """Longest readable track of a recording, in seconds (0 for missing, empty or unreadable files)."""
+        import wave
+        best = 0.0
+        for p in self.recording_paths(sid):
+            try:
+                with wave.open(str(p), "rb") as w:
+                    best = max(best, w.getnframes() / float(w.getframerate() or 1))
+            except (OSError, EOFError, wave.Error):
+                continue
+        return best
 
     def recording_paths(self, sid: str) -> tuple[Path, Path]:
         return self._file(sid, "mic.wav"), self._file(sid, "loopback.wav")
@@ -446,9 +459,17 @@ class SessionManager:
                 r = self.cleanup(sid)
                 notes.append(f"Session '{s['title']}' was already saved; cleanup {'done' if r['ok'] else 'failed'}.")
                 continue
-            if stage == "recording":
-                self._set(sid, stage="recorded", live=False,
-                          note="App closed while recording; partial audio kept.")
+            if stage == "recording" or (stage == "recorded" and not s.get("audio")):
+                if self._recorded_seconds(sid) < MIN_AUDIO_S:
+                    self._set(sid, stage="failed", live=False,
+                              error="The recording stopped before any audio was saved (the app closed or crashed). "
+                                    "Delete this meeting and record again.")
+                    notes.append(f"Recording '{s['title']}' had no usable audio and was marked failed.")
+                else:
+                    mic, loop = self.recording_paths(sid)
+                    audio = {k: p.name for k, p in (("mic", mic), ("loopback", loop)) if p.exists()}
+                    self._set(sid, stage="recorded", live=False, audio=audio,
+                              note="App closed while recording; partial audio kept.")
             elif stage in ACTIVE_STAGES:
                 back = "ready" if stage == "saving" and self._file(sid, "proposal.json").exists() else "failed"
                 self._set(sid, stage=back, error="Interrupted when the app closed. Retry from here.")

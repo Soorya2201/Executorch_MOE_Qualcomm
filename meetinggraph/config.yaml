@@ -26,7 +26,7 @@ llm:
     max_seq_len: 2048           # must match the export's --max_seq_len
     # Keep the model loaded between requests (saves the ~5 s load per request). Unloads after keep_loaded_s idle.
     server_runner: C:/et/llm/npu-run/qnn_llama_runner_server.exe
-    keep_loaded_s: 300
+    keep_loaded_s: 900          # 15 min: covers reviewing a meeting and asking follow-ups
     # Generic alternative (leave runner empty): command with {prompt_file} {prompt} {output_file} {max_tokens}
     command: []
     cwd: ""
