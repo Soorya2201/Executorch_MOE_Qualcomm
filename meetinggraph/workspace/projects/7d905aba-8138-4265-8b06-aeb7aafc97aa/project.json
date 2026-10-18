@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "id": "7d905aba-8138-4265-8b06-aeb7aafc97aa",
+  "name": "Atlas",
+  "created_at": "2026-10-17T22:24:30-07:00",
+  "revision": 4,
+  "features": {
+    "440d61cf-458f-4fa8-bdd4-7d4467ec7777": {
+      "title": "User login",
+      "status": "proposed"
+    },
+    "155823fb-869a-4bfa-8cb3-a3515a55113a": {
+      "title": "Offline sync",
+      "status": "proposed"
+    },
+    "d73e3b6b-268e-4250-bf01-62ae974b8b81": {
+      "title": "Search",
+      "status": "proposed"
+    },
+    "2573e832-e337-4f1e-bcc9-567d4d8a5ad2": {
+      "title": "Export to PDF",
+      "status": "proposed"
+    },
+    "7a4ec216-fdca-42d0-9010-c06acad0ee83": {
+      "title": "Interview",
+      "status": "done"
+    }
+  },
+  "meetings": [
+    "00a77694-8fc9-4431-9dce-435084d5486d",
+    "b92a3494-ad32-47c8-90b9-202ae5bec739",
+    "19b1955c-781f-4470-b1ed-a58f45651e18",
+    "3ddc93b6-a660-4aa1-8412-1aba5d8013f3"
+  ],
+  "updated_at": "2026-10-18T00:16:40-07:00"
+}

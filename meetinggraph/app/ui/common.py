@@ -14,10 +14,8 @@ STAGE_TEXT = {
     "ready": "Ready for review", "saving": "Saving", "failed": "Failed",
     "cleanup_failed": "Saved — cleanup failed",
 }
-STAGE_COLOR = {"ready": "#2e7d32", "failed": "#c62828", "cleanup_failed": "#c62828",
-               "transcribing": "#1565c0", "summarizing": "#1565c0", "saving": "#1565c0", "recording": "#ad1457"}
-STATUS_COLOR = {"proposed": "#9e9e9e", "active": "#1e88e5", "blocked": "#e53935", "done": "#43a047",
-                "archived": "#bdbdbd"}
+from .tokens import STAGE as STAGE_COLOR      # noqa: E402  (colors live in tokens.py)
+from .tokens import STATUS as STATUS_COLOR    # noqa: E402
 
 
 class _Signals(QObject):

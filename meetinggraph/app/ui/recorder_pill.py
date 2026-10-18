@@ -11,6 +11,7 @@ from PySide6.QtGui import QBrush, QColor, QGuiApplication, QPainter, QPainterPat
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QMessageBox, QProgressBar, QToolButton, QVBoxLayout, QWidget
 
 from ..capture import recorder
+from .tokens import RECORD_RED
 
 PILL_QSS = """
 QWidget { color: #f0f3f6; font-family: 'Segoe UI'; }
@@ -18,17 +19,17 @@ QToolButton { border: none; border-radius: 22px; min-width: 44px; min-height: 44
               font-size: 15pt; background: #3a4048; color: #f0f3f6; }
 QToolButton:hover { background: #4a515b; }
 QToolButton:disabled { background: #2b3036; color: #5b636d; }
-QToolButton#rec { background: #e5484d; color: white; font-size: 18pt; }
-QToolButton#rec:hover { background: #f2555a; }
+QToolButton#rec { background: %(red)s; color: white; font-size: 18pt; }
+QToolButton#rec:hover { background: %(red)s; }
 QToolButton#rec:disabled { background: #6b2c2f; color: #c9a0a2; }
 QToolButton#close { min-width: 30px; min-height: 30px; max-width: 30px; max-height: 30px; border-radius: 15px;
                     font-size: 11pt; background: transparent; color: #c9d1d9; }
-QToolButton#close:hover { background: #e5484d; color: white; }
+QToolButton#close:hover { background: %(red)s; color: white; }
 QLabel#time { font-size: 15pt; font-weight: 600; }
 QLabel#state { font-size: 9pt; color: #aab4be; }
 QProgressBar { background: #2b3036; border: none; border-radius: 2px; max-height: 4px; }
-QProgressBar::chunk { background: #3fb950; border-radius: 2px; }
-"""
+QProgressBar::chunk { background: #34C759; border-radius: 2px; }
+""" % {"red": RECORD_RED}
 
 
 class RecorderPill(QWidget):

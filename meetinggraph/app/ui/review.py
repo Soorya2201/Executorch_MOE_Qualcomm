@@ -12,7 +12,7 @@ from ..pipeline.match import _card_from_existing, sync_relations
 from ..pipeline.transcript import fmt_ts, norm
 from ..workspace.store import RELATION_LABEL, STATUSES
 from .common import STAGE_TEXT, esc
-from .theme import BAD, GOOD, MUTED
+from . import theme
 
 HIDDEN_FLAG_PREFIXES = ("Meeting said", "Possible duplicate", "No existing feature matches", "Uncertain:",
                         "No supporting transcript evidence")
@@ -353,22 +353,22 @@ class ChangeCard(QFrame):
         notes = []
         for e in c.get("evidence") or []:
             if e.get("supported"):
-                notes.append(f"<span style='color:{MUTED}'>Heard at {fmt_ts(e.get('start', 0))}: "
+                notes.append(f"<span style='color:{theme.c('secondary')}'>Heard at {fmt_ts(e.get('start', 0))}: "
                              f"“{esc(e.get('quote', ''))}”</span>")
             else:
-                notes.append(f"<span style='color:{BAD}'>Not found in the transcript: “{esc(e.get('quote', ''))}”"
+                notes.append(f"<span style='color:{theme.c('danger')}'>Not found in the transcript: “{esc(e.get('quote', ''))}”"
                              "</span>")
         if c.get("excerpts") and action != "archive":
-            notes.append(f"<span style='color:{MUTED}'>{len(c['excerpts'])} line(s) of what was said are saved "
+            notes.append(f"<span style='color:{theme.c('secondary')}'>{len(c['excerpts'])} line(s) of what was said are saved "
                          "with it, so you can later ask why.</span>")
         if not any(e.get("supported") for e in c.get("evidence") or []) and not c.get("user_edited"):
-            notes.append(f"<span style='color:{BAD}'>This wasn't clearly said in the meeting, so it starts "
+            notes.append(f"<span style='color:{theme.c('danger')}'>This wasn't clearly said in the meeting, so it starts "
                          "switched off. Tick “Include this change” only if it is right.</span>")
         for f in c.get("flags") or []:
             if f.startswith("Uncertain:"):
-                notes.append(f"<span style='color:#9a6700'>The AI was unsure: {esc(f[10:].strip())}</span>")
+                notes.append(f"<span style='color:{theme.c('warning')}'>The AI was unsure: {esc(f[10:].strip())}</span>")
             elif not f.startswith(HIDDEN_FLAG_PREFIXES):
-                notes.append(f"<span style='color:#9a6700'>{esc(f)}</span>")
+                notes.append(f"<span style='color:{theme.c('warning')}'>{esc(f)}</span>")
         self.notes.setText("<br>".join(notes))
         self.notes.setVisible(bool(notes))
         for w in (self.what, self.qbox, self.toggle):
@@ -643,7 +643,7 @@ class ReviewPanel(QWidget):
                 lis = "".join(f"<li>{esc(x['text'])}" + (f" <i>({esc(x['owner'])})</i>" if x.get("owner") else "")
                               + "</li>" for x in items)
                 parts.append(f"<b>{name}</b><ul style='margin-top:2px'>{lis}</ul>")
-        self.m_items.setText("".join(parts) or f"<span style='color:{MUTED}'>No decisions, action items or "
+        self.m_items.setText("".join(parts) or f"<span style='color:{theme.c('secondary')}'>No decisions, action items or "
                                                "questions were found.</span>")
         while self.cards_box.count():
             it = self.cards_box.takeAt(0)
@@ -673,10 +673,10 @@ class ReviewPanel(QWidget):
         self.t2.setText(f"Step 2 · Check the changes ({n_on} of {len(self.cards)} included)")
         open_q = [c for c in self.cards if c.unanswered()]
         if open_q:
-            self.status_line.setText(f"<span style='color:#9a6700'>Answer {len(open_q)} yellow question(s) "
+            self.status_line.setText(f"<span style='color:{theme.c('warning')}'>Answer {len(open_q)} yellow question(s) "
                                      "before saving.</span>")
         else:
-            self.status_line.setText(f"<span style='color:{GOOD}'>Ready to save.</span>")
+            self.status_line.setText(f"<span style='color:{theme.c('success')}'>Ready to save.</span>")
 
     # ---------- actions ----------
     def current_proposal(self) -> dict | None:

@@ -63,6 +63,7 @@ def main() -> int:
     app.setApplicationName("MeetingGraph")
     app.setQuitOnLastWindowClosed(False)
     theme.apply(app)
+    theme.follow_system(app)          # switch live when Windows changes light/dark
     ctx = build_ctx(cfg)
 
     tray = QSystemTrayIcon(dot_icon("#1e88e5"))

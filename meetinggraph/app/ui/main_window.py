@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QThreadPool, QTimer, QUrl
-from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtGui import QAction, QDesktopServices, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMainWindow, QMessageBox, QPushButton, QSplitter, QStatusBar, QTabWidget,
                                QTextBrowser, QVBoxLayout, QWidget)
@@ -13,7 +13,9 @@ from .add_meeting import AddMeetingDialog, RecordSetupDialog
 from .common import STAGE_COLOR, STAGE_TEXT, STATUS_COLOR, Job, dot_icon, esc
 from .graph_view import GraphView
 from .pages import feature_html, meeting_html
+from .components import Toast
 from .review import ReviewPanel
+from . import theme
 
 BUSY = ("recording", "recorded", "transcribing", "summarizing", "saving")
 TAB_REVIEW, TAB_MEETINGS, TAB_FEATURES, TAB_MAP = range(4)
@@ -143,7 +145,7 @@ class MainWindow(QMainWindow):
         self.chat_title.setObjectName("h2")
         self.pending = QLabel("")
         self.pending.setWordWrap(True)
-        self.pending.setStyleSheet("color:#9a6700;")
+        self.pending.setObjectName("warn")
         self.chat = QTextBrowser()
         self.chat.setOpenLinks(False)
         self.ask = QLineEdit()
@@ -187,7 +189,17 @@ class MainWindow(QMainWindow):
         self.feature_filter.textChanged.connect(self.refresh_features)
         for v in (self.meeting_view, self.feature_view, self.chat):
             v.anchorClicked.connect(self._open_link)
-        self.graph.open_node.connect(self.open_item)
+        self.graph.open_node.connect(self._open_from_map)
+        self.nav_back: list = []                     # where Alt+Left returns to
+        self.toast = Toast(self)
+        keys = [QKeySequence(Qt.ALT | Qt.Key_Left)]          # one shortcut: two with the same key would cancel out
+        keys += [k for k in QKeySequence.keyBindings(QKeySequence.Back) if k not in keys]
+        self._back_sc = QShortcut(self)
+        self._back_sc.setKeys(keys)
+        self._back_sc.setContext(Qt.WindowShortcut)
+        self._back_sc.activated.connect(self.go_back)
+        self.graph.go_meetings.connect(lambda: self.tabs.setCurrentIndex(TAB_MEETINGS))
+        self.graph.set_context(ctx.store, ctx.layout.root)
         self.review.request.connect(self.handle_request)
         self.b_add.clicked.connect(self.add_meeting)
         self.b_new.clicked.connect(self.new_project)
@@ -196,10 +208,19 @@ class MainWindow(QMainWindow):
         b_ask.clicked.connect(self.ask_question)
         self.ask.returnPressed.connect(self.ask_question)
 
+        theme.signals.changed.connect(self._on_theme)
+
         self.poll = QTimer(self)
         self.poll.timeout.connect(self.refresh_sessions)
         self.poll.start(1500)
         self.refresh_all()
+
+    def _on_theme(self, _mode: str):
+        """Light/dark switched: re-render the views that contain generated HTML or painted items."""
+        self._last_sig = None
+        self.refresh_all()
+        if self.review.sid:
+            self._load_review(self.review.sid)
 
     # ---------- banner ----------
     def update_banner(self, sessions=None):
@@ -235,7 +256,7 @@ class MainWindow(QMainWindow):
                     "Features and the Map, or ask a question on the right.")
             btn, act = "Add a transcript", self.add_meeting
         if llm_problem:
-            text += f"<br><span style='color:#9a6700'>AI model not available: {esc(llm_problem)} " \
+            text += f"<br><span style='color:{theme.c('warning')}'>AI model not available: {esc(llm_problem)} " \
                     "Using simple rules until it is fixed.</span>"
         self.banner.setObjectName("bannerWarn" if warn else "banner")
         self.banner.style().unpolish(self.banner)
@@ -267,7 +288,12 @@ class MainWindow(QMainWindow):
         else:
             self._on_project(self.projects.currentItem(), None)
 
+    def models_busy(self) -> bool:
+        """True while the AI is answering, transcribing or making notes (the Map waits with its layout)."""
+        return self.model_pool.activeThreadCount() > 0 or bool(self.ctx.sm.live)
+
     def refresh_sessions(self):
+        self.graph.set_busy(self.models_busy())
         sessions = self.ctx.sm.list()
         cur = self.review.sid
         sig = [(s["id"], s.get("stage"), s.get("updated_at")) for s in sessions]
@@ -282,7 +308,7 @@ class MainWindow(QMainWindow):
         for s in sessions:
             stage = s.get("stage", "")
             ready += stage == "ready"
-            it = QListWidgetItem(dot_icon(STAGE_COLOR.get(stage, "#8c959f"), 14),
+            it = QListWidgetItem(dot_icon(STAGE_COLOR.get(stage, STATUS_COLOR["proposed"]), 14),
                                  f"{s['title']}\n{s.get('project_name', '')} · {STAGE_TEXT.get(stage, stage)}")
             it.setData(Qt.UserRole, s["id"])
             self.sessions.addItem(it)
@@ -310,7 +336,7 @@ class MainWindow(QMainWindow):
             self.features.clear()
             self.meeting_view.clear()
             self.feature_view.clear()
-            self.graph.show_graph({"nodes": [], "edges": []})
+            self.graph.load_project(None)
             self.chat_title.setText("Ask a question")
             return
         self.project_id = cur.data(Qt.UserRole)
@@ -334,7 +360,7 @@ class MainWindow(QMainWindow):
             it.setData(Qt.UserRole, m["id"])
             self.meetings.addItem(it)
         if not ms:
-            self.meeting_view.setHtml("<p style='color:#57606a'>No saved meetings yet. Add one and save it from "
+            self.meeting_view.setHtml(f"<p style='color:{theme.c('secondary')}'>No saved meetings yet. Add one and save it from "
                                       "“To review”.</p>")
 
     def refresh_features(self, *_):
@@ -347,17 +373,17 @@ class MainWindow(QMainWindow):
         for f in feats:
             if q and q not in (f["title"] + " " + str(f.get("description", ""))).lower():
                 continue
-            it = QListWidgetItem(dot_icon(STATUS_COLOR.get(f.get("status"), "#999"), 14),
+            it = QListWidgetItem(dot_icon(STATUS_COLOR.get(f.get("status"), STATUS_COLOR["proposed"]), 14),
                                  f"{f['title']}\n{f.get('status', '')}")
             it.setData(Qt.UserRole, f["id"])
             self.features.addItem(it)
         if not feats:
-            self.feature_view.setHtml("<p style='color:#57606a'>No features yet. They appear after you save a "
+            self.feature_view.setHtml(f"<p style='color:{theme.c('secondary')}'>No features yet. They appear after you save a "
                                       "meeting.</p>")
 
     def refresh_graph(self):
         if self.project_id:
-            self.graph.show_graph(build_graph(self.ctx.store, self.project_id))
+            self.graph.load_project(self.project_id)     # read + (rarely) laid out in a background thread
 
     # ---------- viewers ----------
     def _kind_of(self, iid: str) -> str:
@@ -384,6 +410,23 @@ class MainWindow(QMainWindow):
         if s.startswith("open:"):
             _, kind, iid = s.split(":", 2)
             self.open_item(kind, iid)
+
+    def _open_from_map(self, kind: str, iid: str):
+        """Double-click / Open on the Map: remember the Map's view so Alt+Left comes back to it."""
+        self.nav_back.append(("map", self.graph.view_state()))
+        del self.nav_back[:-20]
+        self.open_item(kind, iid)
+        name = self.graph.canvas.label_of(iid)
+        self.toast.show_message(f"Opened “{name}”.", "Back to Map", self.go_back)
+
+    def go_back(self):
+        if not self.nav_back:
+            return
+        where, state = self.nav_back.pop()
+        if where == "map":
+            self.toast.dismiss()
+            self.tabs.setCurrentIndex(TAB_MAP)
+            QTimer.singleShot(0, lambda: self.graph.restore_state(state))
 
     def open_item(self, kind: str, iid: str):
         lst, tab = (self.meetings, TAB_MEETINGS) if kind == "meeting" else (self.features, TAB_FEATURES)
@@ -553,6 +596,7 @@ class MainWindow(QMainWindow):
             self.refresh_sessions()
 
         (self.model_pool if model else self.pool).start(Job(fn, on_done=done, on_error=err))
+        self.graph.set_busy(self.models_busy())
 
     def handle_request(self, action: str, sid: str, payload):
         sm = self.ctx.sm
@@ -635,10 +679,11 @@ class MainWindow(QMainWindow):
                 return
             cites = "".join(
                 f"<br>[{c['n']}] <a href='open:{c['kind']}:{c['doc_id']}'>{esc(c['title'])}</a> "
-                f"<span style='color:#57606a'>({c['kind']})</span>" for c in res["citations"])
+                f"<span style='color:{theme.c('secondary')}'>({c['kind']})</span>" for c in res["citations"])
             body = esc(res["answer"]).replace("\n", "<br>")
-            src = f"<br><span style='color:#57606a'>Sources:</span>{cites}" if cites else ""
+            src = f"<br><span style='color:{theme.c('secondary')}'>Sources:</span>{cites}" if cites else ""
             self.chat.append(f"<p><b>Answer:</b> {body}{src}</p><hr>")
 
         self.model_pool.start(Job(lambda: answer(self.ctx.store, self.ctx.llm, pid, q), on_done=done,
-                                  on_error=lambda m: self.chat.append(f"<p style='color:#cf222e'>{esc(m)}</p>")))
+                                  on_error=lambda m: self.chat.append(f"<p style='color:{theme.c('danger')}'>{esc(m)}</p>")))
+        self.graph.set_busy(True)

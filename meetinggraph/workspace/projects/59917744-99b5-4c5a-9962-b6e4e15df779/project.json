@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "59917744-99b5-4c5a-9962-b6e4e15df779",
+  "name": "Biology",
+  "created_at": "2026-10-18T00:35:27-07:00",
+  "revision": 1,
+  "features": {
+    "c6928fd7-21f3-4bf5-b8e6-50cdb6818beb": {
+      "title": "DNA replication",
+      "status": "proposed"
+    },
+    "c151ef42-239a-446a-b917-9ad69f83d6f2": {
+      "title": "Cell cycle",
+      "status": "proposed"
+    },
+    "8f145680-c519-4613-9b9c-abebbb861810": {
+      "title": "Mitosis",
+      "status": "proposed"
+    },
+    "ad568cf7-a8ce-4495-b3cd-72a0c52cb207": {
+      "title": "Cytokinesis",
+      "status": "proposed"
+    },
+    "078bc7a2-be67-4f65-9565-5d1bca7f281a": {
+      "title": "Cell membrane",
+      "status": "proposed"
+    },
+    "8cc0cc24-e8e9-4d89-951a-75878bd32378": {
+      "title": "Ribosomes",
+      "status": "proposed"
+    },
+    "53ed7df3-285b-40fe-9af5-661d359dd922": {
+      "title": "Organelles",
+      "status": "proposed"
+    },
+    "ccfa5509-53f5-4f57-865d-128ccb223e9b": {
+      "title": "Photosynthesis",
+      "status": "proposed"
+    }
+  },
+  "meetings": [
+    "089b2a19-0a43-45b4-aba2-a0c753acd2af"
+  ],
+  "updated_at": "2026-10-18T00:42:15-07:00"
+}

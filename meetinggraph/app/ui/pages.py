@@ -6,17 +6,7 @@ import re
 from ..workspace.store import RELATION_LABEL
 from .common import STATUS_COLOR, esc
 
-CSS = """
-<style>
-body { font-family: 'Segoe UI'; font-size: 10.5pt; color: #1f2328; }
-h1 { font-size: 16pt; margin: 0 0 4px 0; }
-h3 { font-size: 11pt; margin: 14px 0 4px 0; color: #1f2328; }
-.muted { color: #57606a; }
-.pill { color: white; padding: 2px 8px; border-radius: 8px; font-weight: 600; }
-a { color: #1f6feb; text-decoration: none; }
-ul { margin-top: 2px; }
-</style>
-"""
+from .theme import html_css
 
 WIKI = re.compile(r"\[\[([0-9a-f-]{36})\|([^\]]+)\]\]")
 
@@ -33,8 +23,8 @@ def feature_html(f: dict, features: list[dict], meetings: list[dict]) -> str:
     titles = {x["id"]: x["title"] for x in features}
     mt = {m["id"]: (m.get("title", ""), str(m.get("date", ""))) for m in meetings}
     status = f.get("status", "")
-    color = STATUS_COLOR.get(status, "#8c959f")
-    out = [CSS, f"<h1>{esc(f['title'])}</h1>",
+    color = STATUS_COLOR.get(status, STATUS_COLOR["proposed"])
+    out = [html_css(), f"<h1>{esc(f['title'])}</h1>",
            f"<p><span class='pill' style='background:{color}'>&nbsp;{esc(status)}&nbsp;</span>"
            f" <span class='muted'>· version {f.get('revision', 1)} · updated {esc(str(f.get('updated_at', ''))[:10])}"
            "</span></p>"]
@@ -112,7 +102,7 @@ def meeting_html(m: dict, features: list[dict], meetings: list[dict]) -> str:
                            f"{esc(', '.join(sorted(titles.get(s, '?') for s in shared)))}</span>")
     clean = lambda s: esc(re.sub(r"\s*_\(at [^)]*\)_", "", s))  # noqa: E731
     return "".join([
-        CSS, f"<h1>{esc(m.get('title', ''))}</h1>",
+        html_css(), f"<h1>{esc(m.get('title', ''))}</h1>",
         f"<p class='muted'>{esc(str(m.get('date', '')))} · saved as project version {m.get('revision', '')}"
         " · the transcript was deleted after saving</p>",
         "<h3>Summary</h3>", f"<p>{esc(summary.group(1).strip()) if summary else '—'}</p>",

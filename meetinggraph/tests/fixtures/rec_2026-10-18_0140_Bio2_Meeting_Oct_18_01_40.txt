@@ -1,0 +1,92 @@
+# Recorded meeting. Project: Bio2. Title: Meeting Oct 18 01:40. Date: 2026-10-18
+[00:00:03-00:00:07] (remote) All right, welcome everybody. We're going to do cells in five minutes or less. So stay
+[00:00:07-00:00:10] (remote) with me here. Let's see if we can get it done. So what kinds of cells are there? There are
+[00:00:10-00:00:15] (remote) prokaryotes and there are eukaryotes. Prokaryotes are super simple. They're very small. Think
+[00:00:15-00:00:22] (remote) bacteria and prokaryotes do not have a nucleus. Pro no nucleus. Eukaryotes, however, are much
+[00:00:22-00:00:25] (remote) larger. They're much more complex. They have lots of organelles that we're going to talk
+[00:00:25-00:00:30] (remote) about in a second and they do have a nucleus. Think plants and animal cells.
+[00:00:30-00:00:31] (remote) So what do they have in common?
+[00:00:31-00:00:34] (remote) All cells have DNA, they have ribosomes,
+[00:00:34-00:00:35] (remote) and they have a cell membrane.
+[00:00:35-00:00:37] (remote) We're going to look at all that here in just a second,
+[00:00:37-00:00:40] (remote) but let's focus on eukaryotes and those organelles.
+[00:00:40-00:00:41] (remote) So what do they have?
+[00:00:41-00:00:43] (remote) They have things like chloroplast,
+[00:00:43-00:00:45] (remote) which use sunlight to make food.
+[00:00:45-00:00:48] (remote) Think about the things that do photosynthesis.
+[00:00:48-00:00:49] (remote) They make their own food.
+[00:00:49-00:00:52] (remote) They take that food and they send it to mitochondria,
+[00:00:52-00:00:56] (remote) which makes that food into energy in the form of ATP.
+[00:00:56-00:00:58] (remote) Again, this is what eukaryotes do to get energy.
+[00:00:59-00:01:01] (remote) Next, we've got something like lysosomes.
+[00:01:01-00:01:02] (remote) Lysosomes are an organelle that...
+[00:01:03-00:01:08] (remote) clean up the mess. All of the old materials that need to be digested, lysosomes take care of that.
+[00:01:08-00:01:14] (remote) We have stuff like the endoplasmic reticulum. They fold the proteins that are made by ribosomes.
+[00:01:14-00:01:20] (remote) They take the protein, they fold it up into lots of interesting shapes, and then the Golgi apparatus
+[00:01:20-00:01:24] (remote) packages those proteins and ships them off to different parts of the cell. Now, how can you tell
+[00:01:24-00:01:28] (remote) the difference between the Golgi and the ER we just talked about? Well, you see those
+[00:01:28-00:01:33] (remote) vesicles there. That's how you know you have Golgi apparatus. They make vesicles packages to ship
+[00:01:33-00:01:41] (remote) things out.
+[00:01:34-00:01:40] (remote) Now, what do all cells have? Well, all cells have ribosomes. Look how cute. Ribosomes make proteins.
+[00:01:40-00:01:46] (remote) All cells need proteins. What do all cells also have? Cell membrane. The cell membrane is the
+[00:01:46-00:01:51] (remote) bouncer of the cell. They decide who gets let into the club and who has to wait outside.
+[00:01:51-00:01:55] (remote) Now let's look at that a little more closely. When stuff moves through the cell membrane
+[00:01:55-00:02:00] (remote) and it requires energy to do so, we call that active transport because we are using energy to
+[00:02:00-00:02:05] (remote) actively move things through the cell membrane in or out.
+[00:02:04-00:02:09] (remote) but when it does not require energy at all, we call that passive transport,
+[00:02:09-00:02:13] (remote) no energy required, and passively, if we're moving water, it's called osmosis.
+[00:02:13-00:02:17] (remote) If you're not moving water, it's diffusion. Simple as that.
+[00:02:17-00:02:20] (remote) All cells also have DNA.
+[00:02:20-00:02:23] (remote) DNA is just the instruction booklet in a double helix form
+[00:02:23-00:02:28] (remote) that has all the instructions for all the proteins and things that we need to make in our cells.
+[00:02:28-00:02:31] (remote) So let's look at DNA a little bit more closely.
+[00:02:31-00:02:36] (remote) Deoxyribonucleic acid. It's made up of nucleotides.
+[00:02:36-00:02:43] (remote) There are three parts to a nucleotide, the sugar, the nitrogen base, which is the ATC or G part,
+[00:02:43-00:02:51] (remote) and then the phosphate group. Those are the three parts of that DNA nucleotide. That was there for me.
+[00:02:53-00:02:58] (remote) Let's talk about all these things. When a cell wants to divide, it needs to go through the entire
+[00:02:58-00:03:04] (remote) cell cycle if we want to replicate those organelles in the DNA and all of that to make a copy of the
+[00:03:04-00:03:08] (remote) cell. What's going to happen during this first phase, G1?
+[00:03:08-00:03:12] (remote) The cell's going to grow, grow, grow, and copy a bunch of organelles.
+[00:03:12-00:03:16] (remote) Next is the copying the DNA phase, the S phase.
+[00:03:16-00:03:17] (remote) Copy.
+[00:03:17-00:03:18] (remote) Wait, copy?
+[00:03:18-00:03:21] (remote) Yes, copy the DNA through DNA replication.
+[00:03:21-00:03:23] (remote) How does that work?
+[00:03:23-00:03:25] (remote) Well, there are three enzymes that you need to know.
+[00:03:25-00:03:30] (remote) The DNA helicase is going to come in and break the hydrogen bonds
+[00:03:30-00:03:32] (remote) between the two strands of DNA.
+[00:03:32-00:03:36] (remote) DNA polymerase comes in and adds the A's, T's, C's, and G's
+[00:03:36-00:03:38] (remote) to the two growing strands.
+[00:03:38-00:03:41] (remote) And then you've got ligase, which is going to then glue those...
+[00:03:41-00:03:43] (remote) those strands back together.
+[00:03:43-00:03:46] (remote) This is the whole process of DNA replication.
+? [00:03:44-00:03:46] (you) Wait, what text is speech model are you saying?
+[00:03:46-00:03:49] (remote) You need to remember that A pairs with T,
+[00:03:49-00:03:53] (remote) G pairs with C when you're making complementary strands,
+? [00:03:50-00:03:54] (you) Whose code are you so so
+[00:03:53-00:03:55] (remote) and how you remember that is Austin,
+? [00:03:55-00:03:56] (you) speech
+[00:03:55-00:03:58] (remote) Texas is a great city, A, T, G, C.
+? [00:03:56-00:03:58] (you) Text is things
+[00:03:58-00:04:00] (remote) That is DNA replication.
+? [00:03:59-00:04:01] (you) Please to text a vote for next to speech
+[00:04:00-00:04:03] (remote) Now that we've copied our DNA and we've grown our cell a little bit,
+? [00:04:03-00:04:09] (you) This text is
+[00:04:03-00:04:06] (remote) what do we need to do in order to copy it more?
+[00:04:06-00:04:09] (remote) We need to grow more, get more cytoplasm, get more organelles,
+? [00:04:09-00:04:11] (you) Text is speech is a different one
+[00:04:09-00:04:12] (remote) and now we are ready to split.
+[00:04:12-00:04:15] (remote) We're ready to split the cell. Wait, what is split?
+[00:04:15-00:04:19] (remote) Well, split is the mitotic phase where we do mitosis and cytokinesis.
+[00:04:19-00:04:25] (remote) Why is split? Well, we've got to make new cells. But wait, nobody ever asks, how is split? Oh, yes,
+[00:04:25-00:04:30] (remote) how is split? Well, you divide the nucleus first in mitosis, and then you divide the rest of the
+[00:04:30-00:04:36] (remote) cell in cytokinesis. Well, let's look at what mitosis and cytokinesis look like. First thing,
+[00:04:36-00:04:41] (remote) in prophase of mitosis, hey, look, I can see chromosomes now because they're all condensed
+[00:04:41-00:04:45] (remote) up there. And what's going to happen next? Hey, cool, they're going to line up those chromosomes
+[00:04:45-00:04:50] (remote) in the middle of the cell. Because remember, we are trying to make two new nuclei.
+[00:04:50-00:04:53] (remote) What's going to happen? Oh my gosh, they're going to rip apart somebody.
+[00:04:53-00:04:58] (remote) Please help. And by the end of telophase, we have two nuclei in the same cell.
+[00:04:58-00:05:00] (remote) That's not normal. Well, how do we fix that?
+[00:05:01-00:05:06] (remote) We do cytokinesis, which is making two completely new cells dividing the cytoplasm.
+[00:05:06-00:05:11] (remote) Don't panic. We fixed it. We've divided the nucleus and we divided the cell done.
+[00:05:11-00:05:15] (remote) And that was cells in five minutes or less. I hope.

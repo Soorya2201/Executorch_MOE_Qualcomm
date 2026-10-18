@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "d49ab75e-b6da-421b-a831-21af585b471f",
+  "name": "Bio2",
+  "created_at": "2026-10-18T01:40:45-07:00",
+  "revision": 1,
+  "features": {
+    "5430b253-3e9b-401d-91c3-e504bcba2e60": {
+      "title": "Prokaryotes",
+      "status": "proposed"
+    },
+    "fda235ff-ed94-4512-b17d-d1c996176f84": {
+      "title": "Eukaryotes",
+      "status": "proposed"
+    },
+    "0ac03c57-61e3-4d4c-bfd5-1c6519048a03": {
+      "title": "DNA",
+      "status": "proposed"
+    },
+    "e42c3da0-4195-4233-bc0b-e95af0c9708b": {
+      "title": "Ribosomes",
+      "status": "proposed"
+    },
+    "796797f8-92b3-46cf-a410-8241ea9717cc": {
+      "title": "Cell Membrane",
+      "status": "proposed"
+    },
+    "3218e9f7-bfd2-4a6a-bf8e-c16b8e1f2ad6": {
+      "title": "Organelles",
+      "status": "proposed"
+    },
+    "c3a9ad51-f1e5-4acd-906b-75e66f2e0b93": {
+      "title": "Chloroplast",
+      "status": "proposed"
+    },
+    "72f9afcb-1d09-4fdd-9d7c-c16fd924dd65": {
+      "title": "Mitochondria",
+      "status": "proposed"
+    },
+    "4f4a3923-0eb8-48e8-858c-c3b40380d01d": {
+      "title": "Mitosis",
+      "status": "proposed"
+    },
+    "a5cf4725-c805-4c7b-94d1-57e2d6dd7535": {
+      "title": "Cytokinesis",
+      "status": "proposed"
+    }
+  },
+  "meetings": [
+    "ff3fdc4c-081e-403e-8f57-71b791b4802e"
+  ],
+  "updated_at": "2026-10-18T01:46:39-07:00"
+}
