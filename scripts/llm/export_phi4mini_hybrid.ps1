@@ -1,5 +1,5 @@
-# Export Phi-4-mini-instruct for the Snapdragon X Elite NPU in HYBRID mode: the v1 recipe (W8A16, 8-bit KV cache,
-# same calibration samples) plus a prefill graph that reads the prompt 128 tokens per NPU step.
+﻿# Export Phi-4-mini-instruct for the Snapdragon X Elite NPU in HYBRID mode: the v1 recipe (W8A16, 8-bit KV cache,
+# same calibration samples) plus a prefill graph that reads the prompt 32 tokens per NPU step (128 ran out of memory in the QNN compile).
 # kv mode read prompts one token at a time (~10 tok/s); hybrid shares v1's quantization encodings for both graphs.
 #   powershell -ExecutionPolicy Bypass -File C:\et\llm\export_phi4mini_hybrid.ps1
 $ErrorActionPreference = 'Stop'
@@ -26,7 +26,7 @@ New-Item -ItemType Directory -Force $artifact | Out-Null
 Write-Host "Exporting Phi-4-mini W8A16 hybrid -> $artifact"
 Write-Host "Log: $log   (follow it with: Get-Content $log -Wait -Tail 5)"
 $sw = [Diagnostics.Stopwatch]::StartNew()
-cmd /c "python examples\qualcomm\oss_scripts\llama\llama.py --build_folder build-x86_64-windows --soc_model SC8380XP --decoder_model phi_4_mini-w8a16 --model_mode hybrid --prefill_ar_len 128 --max_seq_len 2048 --temperature 0 --prompt ""What is the capital of France?"" --calib_samples C:\et\llm\calib_text_8.json --compile_only --artifact $artifact > $log 2>&1"
+cmd /c "python examples\qualcomm\oss_scripts\llama\llama.py --build_folder build-x86_64-windows --soc_model SC8380XP --decoder_model phi_4_mini-w8a16 --model_mode hybrid --prefill_ar_len 32 --max_seq_len 2048 --temperature 0 --prompt ""What is the capital of France?"" --calib_samples C:\et\llm\calib_text_8.json --compile_only --artifact $artifact > $log 2>&1"
 $code = $LASTEXITCODE
 Write-Host ("export exit code {0} after {1:N1} h" -f $code, $sw.Elapsed.TotalHours)
 [Win32.Power]::SetThreadExecutionState([Convert]::ToUInt32('80000000', 16)) | Out-Null
@@ -39,3 +39,4 @@ if ($code -ne 0 -or -not (Test-Path "$artifact\hybrid_llama_qnn.pte")) {
     throw "export failed"
 }
 Write-Host "`nDONE: $artifact\hybrid_llama_qnn.pte" -ForegroundColor Green
+

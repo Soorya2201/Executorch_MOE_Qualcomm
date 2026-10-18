@@ -12,6 +12,8 @@ from pathlib import Path
 
 RUNNER = r"C:\et\llm\npu-run\qnn_llama_runner.exe"
 MODEL_DIR = r"C:\et\llm\phi4mini_w8a16_2k"  # overridden by --model_dir
+PTE = "kv_llama_qnn.pte"                    # --pte (hybrid exports: hybrid_llama_qnn.pte)
+EVAL_MODE = "0"                             # --eval_mode: 0 = kv, 1 = hybrid
 
 
 def has(*words):
@@ -86,9 +88,9 @@ def run(prompt, seq_len):
         out, speed = Path(tmp) / "out.txt", Path(tmp) / "speed.txt"
         t0 = time.time()
         r = subprocess.run(
-            [RUNNER, "--model_path", str(Path(MODEL_DIR) / "kv_llama_qnn.pte"),
+            [RUNNER, "--model_path", str(Path(MODEL_DIR) / PTE),
              "--tokenizer_path", str(Path(MODEL_DIR) / "tokenizer.json"), "--decoder_model_version",
-             "phi_4_mini", "--eval_mode", "0", "--seq_len", str(seq_len), "--temperature", "0",
+             "phi_4_mini", "--eval_mode", EVAL_MODE, "--seq_len", str(seq_len), "--temperature", "0",
              "--prompt", prompt, "--output_path", str(out), "--performance_output_path", str(speed)],
             cwd=tmp, capture_output=True, text=True, timeout=600)
         wall = time.time() - t0
@@ -101,13 +103,17 @@ def run(prompt, seq_len):
 
 
 def main():
-    global MODEL_DIR
+    global MODEL_DIR, PTE, EVAL_MODE
     ap = argparse.ArgumentParser()
     ap.add_argument("--only")
     ap.add_argument("--model_dir", default=MODEL_DIR)
+    ap.add_argument("--pte", default=None, help="file in --model_dir (default: hybrid_llama_qnn.pte if present)")
     ap.add_argument("--save", help="write {case: {pass, answer}} JSON here")
     args = ap.parse_args()
     MODEL_DIR = args.model_dir
+    PTE = args.pte or ("hybrid_llama_qnn.pte" if (Path(MODEL_DIR) / "hybrid_llama_qnn.pte").exists() else PTE)
+    EVAL_MODE = "1" if PTE.startswith("hybrid") else "0"
+    print(f"model: {Path(MODEL_DIR) / PTE}  (eval_mode {EVAL_MODE})")
     results, saved = [], {}
     for name, prompt, gen_budget, check in CASES:
         if args.only and args.only != name:

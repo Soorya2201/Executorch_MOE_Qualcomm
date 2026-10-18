@@ -12,6 +12,8 @@ QNN/HTP backend.
 | QAIRT / QNN | 2.37.0.250724 (the version pinned by v1.5.1's `qnn_config.sh`) |
 | Based on | [aaishikasb/qc-executorch-guide](https://github.com/aaishikasb/qc-executorch-guide), Compute track |
 
+**New here? Read [LEARNINGS.md](LEARNINGS.md)**: how a Hugging Face model becomes an NPU `.pte`, what ExecuTorch's static Llama code does, how to present the work, the full timeline, and every lesson learned.
+
 ## Results
 
 | Model | Precision | Result on the NPU |
@@ -168,12 +170,13 @@ strict JSON) -> plan -> [review] -> move + undo log`.
 ## Repo layout
 
 ```
-patches/    0001-0006, git apply onto ExecuTorch v1.5.1
+patches/    0001-0007, git apply onto ExecuTorch v1.5.1
 scripts/    et-env.ps1, calibration/HF download helpers, delegation report, test matrix,
             llm/ (Qwen run, Phi exports v1/v2/hybrid, NPU test suite, CPU reference, metrics), stt/ (Whisper)
 meetinggraph/  NPU meeting memory app (QUANTIFY.md = presentation numbers)
 organizer/  NPU file organizer app
 docs/       works.txt (full change log), moe-pipeline-brainstorm.md
+LEARNINGS.md  everything learned, from the start (read this first)
 results/    runner, benchmark, build and export logs (DeepLab, LLM, STT)
 ```
 
