@@ -175,6 +175,94 @@ DeepLab v3 (INT8 / 8a8w) runs on the NPU through ExecuTorch:
     NOTE  `ollama ps` = 100% CPU: Ollama's ARM64 build does NOT use the Adreno GPU or the NPU.
           Only about 4 GB RAM was free while loaded.
 
+10. TEXT LLM ON THE NPU (Qwen3-0.6B, 16a4w, kv mode): WORKING
+--------------------------------------------------------------
+  Result: "What is the capital of France?" -> "The capital of France is Paris."
+          47.9 tok/s generation, 46.7 tok/s prompt, TTFT 0.41 s, model load 1.43 s, exit 0.
+  Export: llama.py --decoder_model qwen3-0_6b --model_mode kv --max_seq_len 512 --compile_only
+          --calib_samples C:\et\llm\calib_text_32.json   (124.5 min: calibration 117 min, QNN compile 7 min)
+          -> C:\et\llm\qwen3_0_6b\kv_llama_qnn.pte (651.6 MB) + tokenizer.json
+  Run:    powershell -ExecutionPolicy Bypass -File C:\et\llm\run_qwen3_npu.ps1 [-Prompt "..."] [-SeqLen N<=512]
+  Problems fixed on the way:
+   (h) ModuleNotFoundError lm_eval: the LLM requirements live in a bash script
+       (examples\models\llama\install_requirements.sh). Fix: pip install hydra-core tiktoken
+       sentencepiece snakeviz lm_eval==0.4.5 blobfile safetensors, then run
+       install_requirement_helper.py (removes lm_eval's colliding top-level "examples").
+   (i) --calib_tasks wikitext crashes in lm_eval 0.4.5 ("'<' not supported between int and
+       NoneType", likely clashing with transformers 5.0rc). Fix: --calib_samples with a JSON built
+       by C:\et\scripts\make_calib_samples.py (16 wikitext + 16 instruct conversations, offline).
+   (j) UnicodeDecodeError cp1252 reading the calibration JSON: ExecuTorch opens files without
+       encoding=. Fix: PYTHONUTF8=1 (added to et-env.ps1).
+   (k) "Backend QnnBackend is not registered" in qnn_llama_runner. On Windows the backend DLL has
+       its own registry, so the exe must call QnnExecuTorchBackendRegister(register_backend) at
+       startup, as qnn_executor_runner.cpp:213 does. qnn_llama_runner.cpp and
+       qnn_multimodal_runner.cpp didn't. Patched both (the call is a no-op on Linux/Android).
+   (l) Network/DNS blip and a script bug (powershell -File can't pass arrays) during the
+       Phi-4-mini download. Weights verified by SHA-256; refs\main written by hand.
+  Note: the RE2 "invalid perl operator (?!" message for Qwen's tokenizer regex is harmless;
+        the tokenizer falls back and loads.
+  Added: model "phi_4_mini-w8a16" (Phi4MiniW8A16QuantRecipe: every weight 8-bit per-channel,
+         16-bit activations, 8-bit KV) in examples\qualcomm\oss_scripts\llama\{__init__,
+         static_llm_quant_recipe,decoder_constants}.py. Phi-4-mini weights in the HF cache.
+
+11. "CPU SURGE" INVESTIGATION + WHISPER-TINY ON THE NPU
+-------------------------------------------------------
+  Question: is the LLM spilling from the NPU to the CPU (or is Ollama using it)?
+  Answer: NO.
+   - Ollama: no processes, no service (uninstalled earlier).
+   - Compiled programs (scripts\pte_delegation_report.py):
+       Qwen3 kv_forward = 1 instruction = 1 QnnBackend delegate call, 0 CPU kernels.
+       Whisper encoder / decoder = 1 QnnBackend delegate call each, 0 CPU kernels.
+   - Live counters during Qwen generation: NPU compute engine (luid ...DD9D) 100%;
+     qnn_llama_runner CPU = 60% of ONE core = 5% of the 12-core CPU; total CPU about 9-11%.
+   - The runner's CPU share is its host loop: token by token it copies inputs/outputs and the
+     KV-cache update, reads the 151,936-entry logits vector, samples, and waits on the NPU.
+   - The visible CPU surge came from MY background jobs running at the same time: the Whisper-tiny
+     export (x64 Python under emulation, multi-core) and the whisper-small curl download.
+   - Tried --shared_buffer (zero-copy rpcmem): CRASHES on Windows (0xC0000005, faulting module
+     "unknown") right after "Reading metadata". Not usable yet; the default copy path is correct.
+
+  Whisper-tiny (W8A16 / 16a8w), C:\et\stt\whisper_tiny\whisper_qnn_16a8w.pte (82.8 MB): WORKING
+   - Export: python -m examples.qualcomm.oss_scripts.whisper.whisper --soc_model SC8380XP
+             --max_seq_len 128 --compile_only --artifact C:\et\stt\whisper_tiny  (about 6 min)
+     NOTE: the script ends with exit("Finish compile_only ...") -> exit code 1 even on SUCCESS.
+   - Needed: pip install soundfile librosa jiwer (datasets audio decoding).
+   - Added --hf_model to whisper.py (it hard-coded openai/whisper-tiny), so small/base work.
+   - Results on 10 held-out LibriSpeech clips: WER 17.1% (most errors on rare names, e.g.
+     Brion/Irolg); encode 51 ms per 30 s window; decode about 7 ms/token; runner exit 0.
+   - Run: powershell -ExecutionPolicy Bypass -File C:\et\stt\run_whisper_npu.ps1 [-Wav file.wav] [-Model small]
+   - qnn_whisper_runner.cpp already calls QnnExecuTorchBackendRegister (no patch needed); it
+     doesn't strip '\r', so input_list.txt is written with LF only.
+
+12. WHISPER-SMALL + FILE ORGANIZER
+----------------------------------
+  Whisper-small (W8A16): C:\et\stt\whisper_small\whisper_qnn_16a8w.pte (341.8 MB, 1904 NPU ops, 13.3 min export)
+   - Fixed: whisper_model.py hard-coded the decoder example input as d_model 384 (tiny); now sized from config.
+   - Same 10 clips: WER 10.1% (tiny 17.1%). Encode 134 ms per 30 s window, decode about 49 ms/token.
+  File organizer: C:\et\organizer (native ARM64 Python 3.13 venv; pypdf, python-docx, openpyxl)
+   - Pipeline: scan -> digest (FIRST + LAST page only) -> rules -> similarity -> Phi-4-mini on the NPU
+     (picks from a fixed folder list, strict JSON) -> plan -> [review if ON] -> move + undo log.
+   - Review switch: config "review" or --review on|off. ON asks about unsure files and confirms the plan;
+     OFF sorts everything to its best guess. The model never writes commands; code does every move.
+   - LLM confidence is trusted only when it agrees with content similarity (otherwise capped below
+     the threshold), because small models are confidently wrong.
+   - Tested in a sandbox (tests\make_sandbox.py): rules/similarity alone 4/7 confident and correct; LLM
+     path end to end on the NPU using Qwen3-0.6B as a STAND-IN (Phi-4-mini not exported yet).
+     Duplicates detected by sha256 and left in place; undo restores everything.
+   - Fixed while testing: config BOM (utf-8-sig); review accepted the guess on invalid input
+     (now re-asks); Qwen3 needs /no_think or it uses its whole reply budget thinking.
+   - Commands: python organize.py plan|run|undo --config config.json [--review on|off] [--no-llm]
+   - TODO: export Phi-4-mini W8A16 with a 2048-token context, then point config llm.model at it.
+
+9. PUBLISHED
+------------
+  https://github.com/Soorya2201/Executorch_MOE_Qualcomm (PUBLIC, branch main, commit b5f8fbd)
+  Local clone: C:\et\Executorch_MOE_Qualcomm. Author = GitHub no-reply address
+  (107684450+Soorya2201@users.noreply.github.com), set for this repo only.
+  Contents: README, runner patch, scripts, docs (this file + MoE brainstorm), logs.
+  Kept out on purpose: weights, .pte, datasets, Qualcomm SDK binaries.
+  Installed for this: GitHub CLI 2.102.0 (ARM64); signed in as Soorya2201 (keyring).
+
 8. NEXT / IN PROGRESS
 ---------------------
   - Gemma 4 E2B weights: huggingface_hub's downloader produced 0-byte files and then

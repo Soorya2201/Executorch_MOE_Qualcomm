@@ -1,0 +1,75 @@
+diff --git a/examples/qualcomm/oss_scripts/whisper/whisper.py b/examples/qualcomm/oss_scripts/whisper/whisper.py
+index 4d5bacd263..1e9cd1eca0 100644
+--- a/examples/qualcomm/oss_scripts/whisper/whisper.py
++++ b/examples/qualcomm/oss_scripts/whisper/whisper.py
+@@ -68,6 +68,8 @@ logging.basicConfig(level=logging.INFO, format=FORMAT)
+ logging.getLogger().setLevel(logging.INFO)
+ 
+ WHISPER_PTE_FILENAME = "whisper_qnn_16a8w.pte"
++# Hugging Face checkpoint; overridden by --hf_model (e.g. openai/whisper-small).
++HF_MODEL = "openai/whisper-tiny"
+ ENCODER = "encoder"
+ DECODER = "decoder"
+ 
+@@ -78,7 +80,7 @@ def get_dataset(data_size):
+     dataset = load_dataset(
+         "hf-internal-testing/librispeech_asr_dummy", "clean", split="validation"
+     )
+-    processor = AutoProcessor.from_pretrained("openai/whisper-tiny")
++    processor = AutoProcessor.from_pretrained(HF_MODEL)
+ 
+     # prepare input data
+     inputs, target = [], []
+@@ -370,9 +372,9 @@ def compile_whisper(args: argparse.Namespace, qnn_config: QnnConfig, inputs):
+     # ensure the working directory exist.
+     os.makedirs(args.artifact, exist_ok=True)
+ 
+-    tokenizer = AutoTokenizer.from_pretrained("openai/whisper-tiny")
++    tokenizer = AutoTokenizer.from_pretrained(HF_MODEL)
+     module = (
+-        AutoModelForSpeechSeq2Seq.from_pretrained("openai/whisper-tiny")
++        AutoModelForSpeechSeq2Seq.from_pretrained(HF_MODEL)
+         .to("cpu")
+         .eval()
+     )
+@@ -408,7 +410,7 @@ def compile_whisper(args: argparse.Namespace, qnn_config: QnnConfig, inputs):
+ 
+ def inference_whisper(args: argparse.Namespace, qnn_config: QnnConfig, inputs, target):
+     workspace = f"/data/local/tmp/{getpass.getuser()}/executorch/whisper"
+-    tokenizer = AutoTokenizer.from_pretrained("openai/whisper-tiny")
++    tokenizer = AutoTokenizer.from_pretrained(HF_MODEL)
+     tokenizer_json = tokenizer.save_pretrained(args.artifact)[-1]
+     pte_path = (
+         f"{args.pre_gen_pte}/{WHISPER_PTE_FILENAME}"
+@@ -511,7 +513,15 @@ if __name__ == "__main__":
+         type=int,
+     )
+ 
++    parser.add_argument(
++        "--hf_model",
++        help="Hugging Face Whisper checkpoint to export. Default openai/whisper-tiny",
++        default="openai/whisper-tiny",
++        type=str,
++    )
++
+     args = parser.parse_args()
++    HF_MODEL = args.hf_model
+ 
+     qnn_config = QnnConfig.load_config(args.config_file if args.config_file else args)
+ 
+diff --git a/examples/qualcomm/oss_scripts/whisper/whisper_model.py b/examples/qualcomm/oss_scripts/whisper/whisper_model.py
+index 81eae0fa59..a0ff3b6b2a 100644
+--- a/examples/qualcomm/oss_scripts/whisper/whisper_model.py
++++ b/examples/qualcomm/oss_scripts/whisper/whisper_model.py
+@@ -95,7 +95,10 @@ class QnnSeq2SeqLMDecoderExportableModuleWithStaticCache(torch.nn.Module):
+ 
+     def get_example_inputs(self):
+         input_ids = torch.tensor([[0]], dtype=torch.long)
+-        encoder_hidden_states = torch.rand(1, 1500, 384)
++        # Sized from the checkpoint (384 is whisper-tiny's d_model; small is 768).
++        encoder_hidden_states = torch.rand(
++            1, self.config.max_source_positions, self.config.d_model
++        )
+         cache_position = torch.tensor([0], dtype=torch.long)
+         atten_mask = torch.full((1, self.max_cache_length), torch.tensor(-255.0))
+         atten_mask *= torch.arange(self.max_cache_length) > cache_position.reshape(

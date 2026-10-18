@@ -1,0 +1,35 @@
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\regex.cpp:40] Registering override fallback regex
+I 00:00:00.002178 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:151] creating module: model_path=kv_llama_qnn.pte
+I 00:00:00.002957 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:152] creating runner: tokenizer_path=tokenizer.json
+I 00:00:00.004228 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:153] eval mode=0
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\normalizer.cpp:103] Using NFC normalizer. Please notice that our implementation may not handle all edge cases.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1792293885.889778   13108 re2.cc:237] Error parsing '((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s...': invalid perl operator: (?!
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\re2_regex.cpp:27] Re2 failed to compile regex: ((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+), error: invalid perl operator: (?!
+This may be ok if a fallback regex is used.
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\regex_lookahead.cpp:26] Creating PCRE2 regex
+I 00:00:00.351928 executorch:C:\et\executorch\extension\llm\runner\llm_runner_helper.cpp:55] Loaded json tokenizer
+[INFO] [Qnn ExecuTorch]: Deserializing processed data using QnnContextCustomProtocol
+[INFO] [Qnn ExecuTorch]: Creating new backend bundle.
+[INFO] [Qnn ExecuTorch]: create QNN Logger with log_level 1
+[INFO] [Qnn ExecuTorch]: Initialize Qnn backend parameters for Qnn executorch backend type 2
+[INFO] [Qnn ExecuTorch]: Caching: Caching is in RESTORE MODE.
+[INFO] [Qnn ExecuTorch]: QnnContextCustomProtocol expected magic number: 0x5678abcd but get: 0x2000000
+[INFO] [Qnn ExecuTorch]: Running level=1 optimization.
+I 00:00:01.151172 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:232] Reading metadata from model
+I 00:00:01.182988 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:366] creating io_memory
+I 00:00:01.190676 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\prompt_processor.cpp:272] Prompt Processor: total 32 prompt tokens (AR-1 * 32 iters)
+I 00:00:01.863697 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:479] RSS after prompt prefill: 0.000000 MiB (0 if unsupported)
+I 00:00:11.834555 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\token_generator.cpp:357] Warning: Generation stopped at seq_len limit (512) without reaching EOS token. Response may be incomplete.
+I 00:00:11.862083 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\token_generator.cpp:364] - seq_len (512) already equals compiled max_context_len (512). Consider recompiling with larger --max_context_len.
+I 00:00:11.868023 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:496] RSS after finishing text generation: 0.000000 MiB (0 if unsupported)
+I 00:00:11.868190 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:179] 	Prompt Tokens: 32    Generated Tokens: 479
+I 00:00:11.868316 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:185] 	Model Load Time:		1.184000 (seconds)
+I 00:00:11.868556 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:194] 	Total inference time:		10.679000 (seconds)		 Rate: 	44.854387 (tokens/second)
+I 00:00:11.868790 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:203] 		Prompt evaluation:	0.674000 (seconds)		 Rate: 	47.477745 (tokens/second)
+I 00:00:11.869041 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:215] 		Generated 479 tokens:	10.005000 (seconds)		 Rate: 	47.876062 (tokens/second)
+I 00:00:11.869479 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:223] 	Time to first generated token:	0.674000 (seconds)
+I 00:00:11.869525 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:230] 	Sampling time over 511 tokens:	0.164000 (seconds)
+[INFO] [Qnn ExecuTorch]: Destroy Qnn context
+[INFO] [Qnn ExecuTorch]: Destroy Qnn device
+[INFO] [Qnn ExecuTorch]: Destroy Qnn backend

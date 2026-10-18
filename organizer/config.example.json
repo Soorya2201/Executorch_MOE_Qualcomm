@@ -1,0 +1,31 @@
+{
+  "sources": ["C:\\Users\\qc_de\\Downloads"],
+  "recursive": false,
+
+  "destinations": {
+    "Finance":   {"path": "C:\\Users\\qc_de\\Documents\\Finance",   "description": "invoices, receipts, bank statements, taxes, budgets",
+                  "patterns": ["invoice*", "receipt*", "*statement*"]},
+    "School":    {"path": "C:\\Users\\qc_de\\Documents\\School",    "description": "course notes, assignments, syllabi, lecture slides, exams"},
+    "Research":  {"path": "C:\\Users\\qc_de\\Documents\\Research",  "description": "papers, experiment notes, datasets, results"},
+    "Code":      {"path": "C:\\Users\\qc_de\\Documents\\Code",      "description": "source code, scripts, notebooks",
+                  "extensions": [".py", ".ipynb", ".js", ".ts", ".cpp", ".c", ".h", ".ps1", ".sh"]},
+    "Career":    {"path": "C:\\Users\\qc_de\\Documents\\Career",    "description": "resumes, cover letters, offer letters, job applications"},
+    "Personal":  {"path": "C:\\Users\\qc_de\\Documents\\Personal",  "description": "IDs, travel, medical, housing, personal letters"}
+  },
+
+  "review": true,
+  "confidence_threshold": 0.6,
+  "similarity_threshold": 0.25,
+  "page_chars": 1200,
+  "state_dir": "C:\\et\\organizer\\state",
+
+  "llm": {
+    "enabled": true,
+    "runner": "C:\\et\\llm\\npu-run\\qnn_llama_runner.exe",
+    "model": "C:\\et\\llm\\phi4mini_w8a16_2k\\kv_llama_qnn.pte",
+    "tokenizer": "C:\\et\\llm\\phi4mini_w8a16_2k\\tokenizer.json",
+    "decoder_model_version": "phi_4_mini",
+    "max_seq_len": 2048,
+    "max_new_tokens": 96
+  }
+}

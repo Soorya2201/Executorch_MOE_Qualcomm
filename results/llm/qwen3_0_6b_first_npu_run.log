@@ -1,0 +1,35 @@
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\regex.cpp:40] Registering override fallback regex
+I 00:00:00.000766 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:151] creating module: model_path=C:\et\llm\npu-run\kv_llama_qnn.pte
+I 00:00:00.000786 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:152] creating runner: tokenizer_path=C:\et\llm\npu-run\tokenizer.json
+I 00:00:00.000792 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:153] eval mode=0
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\normalizer.cpp:103] Using NFC normalizer. Please notice that our implementation may not handle all edge cases.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1792293100.170368    7496 re2.cc:237] Error parsing '((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s...': invalid perl operator: (?!
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\re2_regex.cpp:27] Re2 failed to compile regex: ((?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+), error: invalid perl operator: (?!
+This may be ok if a fallback regex is used.
+I tokenizers:C:\et\executorch\extension\llm\tokenizers\src\regex_lookahead.cpp:26] Creating PCRE2 regex
+I 00:00:00.315580 executorch:C:\et\executorch\extension\llm\runner\llm_runner_helper.cpp:55] Loaded json tokenizer
+[INFO] [Qnn ExecuTorch]: Deserializing processed data using QnnContextCustomProtocol
+[INFO] [Qnn ExecuTorch]: Creating new backend bundle.
+[INFO] [Qnn ExecuTorch]: create QNN Logger with log_level 1
+[INFO] [Qnn ExecuTorch]: Initialize Qnn backend parameters for Qnn executorch backend type 2
+[INFO] [Qnn ExecuTorch]: Caching: Caching is in RESTORE MODE.
+[INFO] [Qnn ExecuTorch]: QnnContextCustomProtocol expected magic number: 0x5678abcd but get: 0x2000000
+[INFO] [Qnn ExecuTorch]: Running level=1 optimization.
+I 00:00:01.427738 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:232] Reading metadata from model
+I 00:00:01.427871 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:366] creating io_memory
+I 00:00:01.436378 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\prompt_processor.cpp:272] Prompt Processor: total 19 prompt tokens (AR-1 * 19 iters)
+I 00:00:01.843462 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:479] RSS after prompt prefill: 0.000000 MiB (0 if unsupported)
+I 00:00:03.075812 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\token_generator.cpp:346] 
+Reached to the end of generation
+I 00:00:03.075856 executorch:C:\et\executorch\examples\qualcomm\oss_scripts\llama\runner\runner.cpp:496] RSS after finishing text generation: 0.000000 MiB (0 if unsupported)
+I 00:00:03.103995 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:179] 	Prompt Tokens: 19    Generated Tokens: 59
+I 00:00:03.104026 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:185] 	Model Load Time:		1.434000 (seconds)
+I 00:00:03.104035 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:194] 	Total inference time:		1.640000 (seconds)		 Rate: 	35.975610 (tokens/second)
+I 00:00:03.104042 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:203] 		Prompt evaluation:	0.407000 (seconds)		 Rate: 	46.683047 (tokens/second)
+I 00:00:03.104049 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:215] 		Generated 59 tokens:	1.233000 (seconds)		 Rate: 	47.850770 (tokens/second)
+I 00:00:03.104055 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:223] 	Time to first generated token:	0.407000 (seconds)
+I 00:00:03.104061 executorch:C:\et\executorch\examples\qualcomm\..\..\..\executorch/extension/llm/runner/stats.h:230] 	Sampling time over 78 tokens:	0.022000 (seconds)
+[INFO] [Qnn ExecuTorch]: Destroy Qnn context
+[INFO] [Qnn ExecuTorch]: Destroy Qnn device
+[INFO] [Qnn ExecuTorch]: Destroy Qnn backend

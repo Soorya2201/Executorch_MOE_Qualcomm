@@ -1,0 +1,52 @@
+diff --git a/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp b/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp
+index 3556bf40da..6692be3d71 100644
+--- a/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp
++++ b/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp
+@@ -18,7 +18,9 @@
+ #include <executorch/backends/qualcomm/runtime/QnnExecuTorch.h>
+ #include <executorch/examples/qualcomm/oss_scripts/llama/runner/runner.h>
+ #include <executorch/extension/llm/runner/irunner.h>
++#include <executorch/runtime/backend/interface.h>
+ #include <executorch/runtime/platform/log.h>
++#include <executorch/runtime/platform/runtime.h>
+ #include <gflags/gflags.h>
+ #include <fstream>
+ #include <vector>
+@@ -288,6 +290,11 @@ void start_runner(
+ int main(int argc, char** argv) {
+   std::vector<std::string> prompts = CollectPrompts(argc, argv);
+   gflags::ParseCommandLineFlags(&argc, &argv, true);
++  // On Windows the backend DLL has its own registry; register QnnBackend into
++  // the exe's (no-op elsewhere). Mirrors qnn_executor_runner.cpp.
++  executorch::runtime::runtime_init();
++  QnnExecuTorchBackendRegister(
++      reinterpret_cast<void*>(executorch::runtime::register_backend));
+   if (!gflags::GetCommandLineFlagInfoOrDie("prompt").is_default &&
+       !gflags::GetCommandLineFlagInfoOrDie("tokenized_prompt").is_default) {
+     ET_CHECK_MSG(false, "Only provide prompt or tokenized_input but not both.");
+diff --git a/examples/qualcomm/oss_scripts/llama/qnn_multimodal_runner.cpp b/examples/qualcomm/oss_scripts/llama/qnn_multimodal_runner.cpp
+index 9ea6890b40..f622e67a59 100644
+--- a/examples/qualcomm/oss_scripts/llama/qnn_multimodal_runner.cpp
++++ b/examples/qualcomm/oss_scripts/llama/qnn_multimodal_runner.cpp
+@@ -23,7 +23,9 @@
+ #include <executorch/extension/llm/runner/image.h>
+ #include <executorch/extension/llm/runner/irunner.h>
+ #include <executorch/extension/llm/runner/multimodal_input.h>
++#include <executorch/runtime/backend/interface.h>
+ #include <executorch/runtime/platform/log.h>
++#include <executorch/runtime/platform/runtime.h>
+ #include <gflags/gflags.h>
+ 
+ #include <fstream>
+@@ -256,6 +258,11 @@ void start_multimodal_runner(
+ int main(int argc, char** argv) {
+   std::vector<std::string> prompts = CollectPrompts(argc, argv);
+   gflags::ParseCommandLineFlags(&argc, &argv, true);
++  // On Windows the backend DLL has its own registry; register QnnBackend into
++  // the exe's (no-op elsewhere). Mirrors qnn_executor_runner.cpp.
++  executorch::runtime::runtime_init();
++  QnnExecuTorchBackendRegister(
++      reinterpret_cast<void*>(executorch::runtime::register_backend));
+   if (!gflags::GetCommandLineFlagInfoOrDie("prompt").is_default &&
+       !gflags::GetCommandLineFlagInfoOrDie("tokenized_prompt").is_default) {
+     ET_CHECK_MSG(false, "Only provide prompt or tokenized_input but not both.");

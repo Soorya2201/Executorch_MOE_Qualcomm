@@ -14,6 +14,18 @@ QNN/HTP backend.
 
 ## Results
 
+| Model | Precision | Result on the NPU |
+|---|---|---|
+| DeepLab v3 (segmentation) | 8a8w | 6.76 ms/image, 93.0 % PA / 64.7 % mIoU |
+| **Qwen3-0.6B** (LLM) | 16a4w, kv, 512 ctx | **47.9 tok/s** decode, 47.5 tok/s prompt, TTFT 0.41 s |
+| **Whisper-tiny** (speech-to-text) | 16a8w | 51 ms encode per 30 s, about 7 ms/token, WER 17.1 % |
+| **Whisper-small** (speech-to-text) | 16a8w | 134 ms encode per 30 s, about 49 ms/token, **WER 10.1 %** |
+| Phi-4-mini-instruct | **W8A16** (new recipe), 2048 ctx | export script ready (`scripts/llm/export_phi4mini_w8a16.ps1`); needs a large page file |
+
+All of these compile to a **single QNN delegate call per method with zero CPU kernels**
+(`scripts/pte_delegation_report.py`). During Qwen generation the NPU compute engine reads 100 % while
+the runner uses about 60 % of one core (5 % of the CPU) for its host loop.
+
 **DeepLab v3 (INT8, 8a8w) on the NPU**
 
 | Metric | Value |
@@ -48,6 +60,20 @@ cd executorch
 git apply ..\Executorch_MOE_Qualcomm\patches\0001-qnn_executor_runner-fix-windows-heap-corruption-and-etdump-text-mode.patch
 ```
 
+## More Windows fixes (patches 0002-0004)
+
+- **[0002](patches/0002-llm-runners-register-QnnBackend-on-windows.patch): `Backend QnnBackend is not registered`**
+  in `qnn_llama_runner` / `qnn_multimodal_runner`. On Windows the backend DLL keeps its own registry,
+  so the exe must call `QnnExecuTorchBackendRegister(register_backend)` at startup, as
+  `qnn_executor_runner` and `qnn_whisper_runner` already do. The call is a no-op on Linux/Android.
+- **[0003](patches/0003-phi_4_mini-w8a16-recipe.patch): `phi_4_mini-w8a16`**, a Phi-4-mini model entry
+  whose recipe keeps every weight at 8-bit per-channel with 16-bit activations (the stock recipe is mostly 4-bit).
+- **[0004](patches/0004-whisper-hf_model-arg-and-config-sized-inputs.patch): Whisper beyond tiny.** `whisper.py`
+  hard-coded `openai/whisper-tiny` (added `--hf_model`) and `whisper_model.py` hard-coded the decoder's
+  example `encoder_hidden_states` as d_model 384, so small (768) failed with a channel mismatch.
+
+Apply all patches (each applies cleanly to v1.5.1): `git apply ..\Executorch_MOE_Qualcomm\patches\*.patch`
+
 ## Windows-on-ARM build gotchas (all solved)
 
 | Symptom | Cause | Fix |
@@ -57,7 +83,13 @@ git apply ..\Executorch_MOE_Qualcomm\patches\0001-qnn_executor_runner-fix-window
 | Export: `ModuleNotFoundError: pydot` | `install_executorch.py` skips `backends/qualcomm/requirements.txt` | `pip install -r backends/qualcomm/requirements.txt pandas` |
 | Export: `Failed to initialize QNN backend for kHtpBackend` | `envsetup.ps1` adds the **ARM64** QNN DLLs (host shell arch), but export runs in **x64** Python | put `lib\x86_64-windows-msvc` first on PATH (see `scripts/et-env.ps1`) |
 | QAIRT zip: "End of Central Directory not found" | download truncated mid-stream | resume with `curl.exe -C -` |
-| HF `snapshot_download` writes 0-byte weights / stalls | Xet transfer backend issue | `curl.exe` straight into the HF cache blob, check SHA-256, link with `mklink` |
+| HF `snapshot_download` writes 0-byte weights / stalls | Xet transfer backend issue | `scripts/hf_curl_download.ps1`: `curl.exe` straight into the HF cache blob, check SHA-256, link with `mklink` |
+| LLM export: `ModuleNotFoundError: lm_eval` | LLM requirements live in a bash script | `pip install hydra-core tiktoken sentencepiece lm_eval==0.4.5 blobfile safetensors`, then `install_requirement_helper.py` |
+| `--calib_tasks wikitext` crashes in lm_eval (`'<' not supported between int and NoneType`) | lm_eval 0.4.5 vs transformers 5.0rc | `--calib_samples` with JSON from `scripts/make_calib_samples.py` |
+| `UnicodeDecodeError: 'charmap'` reading calibration JSON | ExecuTorch opens files without `encoding=` (cp1252 on Windows) | `PYTHONUTF8=1` (in `et-env.ps1`) |
+| Whisper export: `please install 'librosa' and 'soundfile'` | audio decoding deps not installed | `pip install soundfile librosa jiwer` |
+| Whisper export "fails" with exit 1 | the script ends with `exit("Finish compile_only ...")` | check the log for that line; it's a success |
+| `--shared_buffer` on the LLM runner | rpcmem zero-copy path | **crashes on Windows (0xC0000005)**; leave it off |
 
 ## NPU runner test matrix
 
@@ -80,14 +112,39 @@ exist in QNN 2.37 (`TopK`, `Gather`, `ScatterElements`, `OneHot`, `MatMul`), and
 lowers in ExecuTorch's tests. The design space, difficulty and a phased plan are in
 [`docs/moe-pipeline-brainstorm.md`](docs/moe-pipeline-brainstorm.md).
 
+## Running the models
+
+```powershell
+scripts\llm\run_qwen3_npu.ps1 -Prompt "Explain NPUs in 3 sentences." -SeqLen 512   # LLM on the NPU
+scripts\stt\run_whisper_npu.ps1 [-Model small] [-Wav C:\path\talk.wav]                 # speech-to-text + WER
+scripts\llm\export_phi4mini_w8a16.ps1                                                  # Phi-4-mini W8A16 export
+```
+Paths inside the scripts point at this machine's layout (`C:\et\...`); adjust them to yours.
+
+## File organizer (`organizer/`)
+
+A local file organizer that uses the NPU LLM only as a **classifier**:
+`scan -> digest (first + last page only) -> rules -> similarity -> Phi-4-mini (NPU, fixed folder list,
+strict JSON) -> plan -> [review] -> move + undo log`.
+
+- `--review on`: asks about unsure files and confirms the plan. `--review off`: sorts everything.
+- The model never writes commands; code does every move. Duplicates (sha256) are left in place;
+  `undo` restores the last run.
+- The LLM's self-reported confidence is trusted only when it agrees with content similarity (a 0.6B test
+  model was confidently wrong).
+- `python organize.py plan|run|undo --config config.json [--review on|off] [--no-llm]`;
+  sandbox test: `python tests\make_sandbox.py <dir>`.
+- Runs on native ARM64 Python (needs `pypdf python-docx openpyxl`). Waiting on the Phi-4-mini export.
+
 ## Repo layout
 
 ```
-patches/   runner fix (git apply onto ExecuTorch v1.5.1)
-scripts/   et-env.ps1 (environment), input prep, scoring, ETDump inspection, test matrix,
-           page-file registry setter (needs admin; reboot to apply)
-docs/      works.txt (full change log), moe-pipeline-brainstorm.md
-results/   runner, benchmark, build and export logs
+patches/    0001-0004, git apply onto ExecuTorch v1.5.1
+scripts/    et-env.ps1, calibration/HF download helpers, delegation report, test matrix,
+            llm/ (Qwen run, Phi export), stt/ (Whisper prep, run, WER)
+organizer/  NPU file organizer app
+docs/       works.txt (full change log), moe-pipeline-brainstorm.md
+results/    runner, benchmark, build and export logs (DeepLab, LLM, STT)
 ```
 
 ## Not included
@@ -99,7 +156,7 @@ Get QAIRT from Qualcomm under its own license.
 
 1. Install Git, CMake, **x64** Python 3.12, VS 2022 Build Tools (ARM64 + x64 MSVC, Clang), QAIRT 2.37.0.250724.
 2. Enable Developer Mode; `git clone -c core.symlinks=true --branch v1.5.1 --recurse-submodules https://github.com/pytorch/executorch.git`
-3. `git apply` the patch, adjust paths in `scripts/et-env.ps1`, then `. .\scripts\et-env.ps1`
+3. `git apply` the patches, adjust paths in `scripts/et-env.ps1`, then `. .\scripts\et-env.ps1`
 4. `python install_executorch.py`; `pip install -r backends\qualcomm\requirements.txt pandas`
 5. Clear `CMAKE_GENERATOR*`, then `cmd /c "powershell -File backends\qualcomm\scripts\build.ps1 -Release > build.log 2>&1"`
 6. `python -m examples.qualcomm.scripts.deeplab_v3 --build_folder build-x86_64-windows --soc_model SC8380XP --backend htp --compile_only --download`

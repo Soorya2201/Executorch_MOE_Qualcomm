@@ -1,0 +1,87 @@
+diff --git a/examples/qualcomm/oss_scripts/llama/__init__.py b/examples/qualcomm/oss_scripts/llama/__init__.py
+index 4e2b0516ef..fdda3e1d7d 100644
+--- a/examples/qualcomm/oss_scripts/llama/__init__.py
++++ b/examples/qualcomm/oss_scripts/llama/__init__.py
+@@ -83,6 +83,7 @@ from executorch.examples.qualcomm.oss_scripts.llama.static_llm_quant_recipe impo
+     LlamaStories110MQuantRecipe,
+     LlamaStories260KQuantRecipe,
+     Phi4MiniQuantRecipe,
++    Phi4MiniW8A16QuantRecipe,
+     Qwen2_5_0_5BQuantRecipe,
+     Qwen2_5_1_5BQuantRecipe,
+     Qwen3_0_6BQuantRecipe,
+@@ -456,6 +457,25 @@ class Phi4Mini(LLMModelConfig):
+     quant_recipe = Phi4MiniQuantRecipe
+ 
+ 
++@register_llm_model("phi_4_mini-w8a16")
++@dataclass(init=False, frozen=True)
++class Phi4MiniW8A16(LLMModelConfig):
++    repo_id: str = "microsoft/Phi-4-mini-instruct"
++    params_path: str = os.path.join(
++        BASE_DIR, "../../../models/phi_4_mini/config/config.json"
++    )
++    convert_weights = convert_phi_4_mini_weights
++    transform_weight = False
++    instruct_model = True
++    num_sharding = 8
++    masked_softmax = False
++    seq_mse_candidates = 0
++    r1 = False
++    r2 = False
++    r3 = False
++    quant_recipe = Phi4MiniW8A16QuantRecipe
++
++
+ @register_llm_model("qwen2_5-0_5b")
+ @dataclass(init=False, frozen=True)
+ class Qwen2_5_0_5B(LLMModelConfig):
+diff --git a/examples/qualcomm/oss_scripts/llama/decoder_constants.py b/examples/qualcomm/oss_scripts/llama/decoder_constants.py
+index 26e5aee1ad..fa7542ea2b 100644
+--- a/examples/qualcomm/oss_scripts/llama/decoder_constants.py
++++ b/examples/qualcomm/oss_scripts/llama/decoder_constants.py
+@@ -54,6 +54,7 @@ DECODER_MODEL_VERSION = {
+     "granite_3_3-2b_instruct": "granite",
+     "granite_speech_3_3-2b": "granite_speech",
+     "phi_4_mini": "phi_4_mini",
++    "phi_4_mini-w8a16": "phi_4_mini",
+     "qwen2_5-0_5b": "qwen2_5",
+     "qwen2_5-1_5b": "qwen2_5",
+     "qwen3-0_6b": "qwen3",
+diff --git a/examples/qualcomm/oss_scripts/llama/static_llm_quant_recipe.py b/examples/qualcomm/oss_scripts/llama/static_llm_quant_recipe.py
+index 29eba63a07..35bd3b490d 100644
+--- a/examples/qualcomm/oss_scripts/llama/static_llm_quant_recipe.py
++++ b/examples/qualcomm/oss_scripts/llama/static_llm_quant_recipe.py
+@@ -542,6 +542,32 @@ class Phi4MiniQuantRecipe(StaticLLMQuantRecipe):
+         self.recipe.custom_quant_annotations.append(annotate_kv_8bit)
+ 
+ 
++class Phi4MiniW8A16QuantRecipe(StaticLLMQuantRecipe):
++    """Phi-4-mini with every weight at 8-bit per-channel and 16-bit activations (16a8w)."""
++
++    default_quant_dtype = QuantDtype.use_16a8w
++
++    def __init__(self, verbose: bool = False):
++        super().__init__()
++
++        self.recipe = QuantRecipe(
++            self.default_quant_dtype,
++            False,
++            act_observer=MinMaxObserver,
++            granularity=QuantGranularity.PER_TENSOR,
++            verbose=verbose,
++        ).add_node_target(
++            {
++                torch.ops.aten.conv2d.default,
++            },
++            QuantDtype.use_16a8w,
++            False,
++            act_observer=MinMaxObserver,
++            granularity=QuantGranularity.PER_CHANNEL,
++        )
++        self.recipe.custom_quant_annotations.append(annotate_kv_8bit)
++
++
+ class Qwen2_5_0_5BQuantRecipe(StaticLLMQuantRecipe):
+     default_quant_dtype = QuantDtype.use_16a4w
+ 

@@ -9,6 +9,8 @@ $env:QNN_SDK_ROOT = 'C:\Qualcomm\AIStack\QAIRT\2.37.0.250724'
 $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -notlike "$env:QNN_SDK_ROOT*aarch64-windows-msvc*" }) -join ';'
 $env:PATH = "$env:QNN_SDK_ROOT\lib\x86_64-windows-msvc;$env:QNN_SDK_ROOT\bin\x86_64-windows-msvc;$env:PATH"
 $env:PYTHONPATH = "$env:EXECUTORCH_ROOT\..;$env:PYTHONPATH"
+# ExecuTorch opens text/JSON files without encoding=; on Windows that defaults to cp1252.
+$env:PYTHONUTF8 = '1'
 # On an ARM64 host the VS generator defaults to ARM64; the AOT pybind wheel must match the x64 (AMD64) Python.
 # build.ps1 passes -A explicitly, so this only affects builds that don't (e.g. install_executorch.py).
 $env:CMAKE_GENERATOR = 'Visual Studio 17 2022'   # CMake ignores CMAKE_GENERATOR_PLATFORM unless this is set
