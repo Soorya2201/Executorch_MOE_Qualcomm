@@ -265,3 +265,59 @@ def test_features_not_in_the_transcript_are_removed():
     ex.drop_ungrounded_features(draft, segs)
     assert [f["title"] for f in draft["feature_mentions"]] == ["Knicks game", "Movie night"]
     assert draft["dropped_features"] == ["Mitochondria"]
+
+
+# ---- at least one feature per minute of speech, all of them from the transcript ----
+CHAT = ("Ana: Did you see the Knicks game last night? The Knicks were amazing in the fourth quarter.\n"
+        "Ben: Yes, and then we watched Verity, the Colleen Hoover movie, at the cinema downtown.\n"
+        "Ana: The cinema downtown has new seats now, and the popcorn was great.\n") * 4
+
+
+class EmptyLLM:
+    heuristic = False
+    max_seq_len = 2048
+
+    def __init__(self, more=None):
+        self.more, self.calls = more, 0
+
+    def generate(self, prompt, max_tokens=1024, json_mode=False, schema=None):
+        self.calls += 1
+        if "NOT already in this list" in prompt and self.more is not None:
+            return json.dumps({"feature_mentions": self.more})
+        if "feature_mentions" in json.dumps(schema or {}):
+            return '{"feature_mentions": []}'
+        return '{"summary": "A chat.", "decisions": [], "action_items": [], "open_questions": []}'
+
+
+def test_required_features_per_minute():
+    from app.pipeline.transcript import from_text
+    assert ex.required_features(from_text("Ana: hi")) == 1
+    assert ex.required_features(from_text(" ".join(["word"] * 151))) == 2           # 151 words = 2 started minutes
+    assert ex.required_features(from_text(" ".join(["word"] * 9000))) == ex.MAX_GUARANTEED
+    assert ex.required_features([]) == 0
+
+
+def test_fallback_gives_grounded_features_when_model_finds_none():
+    from app.pipeline.transcript import from_text
+    segs = from_text(CHAT)
+    d = ex.extract_draft(EmptyLLM(), segs, "Chat", [])
+    need = ex.required_features(segs)
+    titles = [f["title"] for f in d["feature_mentions"]]
+    assert len(titles) == need >= 1, titles
+    text = " ".join(s["text"] for s in segs).lower()
+    for f in d["feature_mentions"]:
+        assert f["title"].lower() in text                                   # named in the transcript
+        assert all(e["supported"] for e in f["evidence"])                   # quote found word for word
+    assert not {"Ana", "Ben"} & set(titles)                                 # speakers are not features
+
+
+def test_model_second_pass_is_used_before_the_fallback():
+    from app.pipeline.transcript import from_text
+    more = [{"title": "Knicks game", "action": "add", "description": "Basketball.",
+             "evidence": [{"quote": "Did you see the Knicks game last night?"}]},
+            {"title": "Teleporter", "action": "add", "description": "Invented.", "evidence": [{"quote": "beam me"}]}]
+    segs = from_text(CHAT)
+    d = ex.extract_draft(EmptyLLM(more=more), segs, "Chat", [])
+    titles = [f["title"] for f in d["feature_mentions"]]
+    assert titles[0] == "Knicks game" and "Teleporter" not in titles         # invented one still never shown
+    assert len(titles) == ex.required_features(segs)

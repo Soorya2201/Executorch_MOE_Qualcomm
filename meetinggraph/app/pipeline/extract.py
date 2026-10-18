@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import json
+import math
 import re
+from collections import Counter
 
 from ..models.llm import PLACEHOLDER_RE, _skeleton, BaseLLM, LLMError
 from . import heuristic, prompts
@@ -350,7 +352,111 @@ def combine_parts(llm: BaseLLM, parts: list[dict], segments: list[dict], title: 
     draft["title"] = title
     check_evidence(draft, segments)
     drop_ungrounded_features(draft, segments)
+    ensure_min_features(llm, draft, segments)
     return draft
+
+
+WORDS_PER_MINUTE = 150      # spoken English; counting words also ignores silence in recordings
+MAX_GUARANTEED = 10         # a long meeting does not need 40 thin features
+
+
+def required_features(segments: list[dict]) -> int:
+    """One feature per started minute of speech, at least one, at most MAX_GUARANTEED."""
+    words = sum(len(s.get("text", "").split()) for s in segments)
+    return 0 if not words else min(MAX_GUARANTEED, max(1, math.ceil(words / WORDS_PER_MINUTE)))
+
+
+def ensure_min_features(llm: BaseLLM, draft: dict, segments: list[dict]) -> None:
+    """Top up the features to required_features(): first ask the model for more topics named in the transcript,
+    then fall back to the transcript's most-mentioned names. Every added feature is grounded (its name is said
+    and its quote is found), so it passes the same rule as everything else in Review."""
+    need = required_features(segments) - len(draft["feature_mentions"])
+    if need <= 0:
+        return
+    have = {norm(f["title"]) for f in draft["feature_mentions"]}
+
+    def add(fs: list[dict]) -> None:
+        nonlocal need
+        probe = {"summary": "", "decisions": [], "action_items": [], "open_questions": [], "feature_mentions": fs}
+        check_evidence(probe, segments)
+        drop_ungrounded_features(probe, segments)
+        for f in probe["feature_mentions"]:
+            if need > 0 and norm(f["title"]) not in have:
+                have.add(norm(f["title"]))
+                f["action"] = "add"
+                draft["feature_mentions"].append(f)
+                need -= 1
+
+    if not llm.heuristic:
+        chunk_chars = plan_requests(llm, 6000, "- (none yet)")[0]
+        for chunk in chunk_lines(to_text(segments), chunk_chars)[:2]:          # at most two extra requests
+            if need <= 0:
+                break
+            names = ", ".join(f["title"] for f in draft["feature_mentions"]) or "(none)"
+            prompt = prompts.FEATURES_MORE.format(n=need, have=names, transcript=chunk)
+            try:
+                found = _ask_json(llm, prompt, FEATURES_OUT, prompts.FEATURES_COMPACT_SCHEMA)
+            except (ExtractionError, LLMError):
+                continue
+            add(_normalize_draft({"feature_mentions": found.get("feature_mentions", [])})["feature_mentions"])
+    if need > 0:
+        add(_topics_from_transcript(segments, need + len(have)))
+
+
+_STOP = set("""a about above after again against all also am an and any are aren as at be because been before being
+below between both but by can could did do does doing done down during each else even ever every few for from
+further get gets getting go going gonna got had has have having he her here hers him his how i if in into is it its
+itself just know let like ll maybe me might more most much must my no nor not now of off ok okay on once one only or
+other our out over own really right said same say says see she should so some something such sure than that the
+their them then there these they thing things think this those though through to too um uh under until up us very
+want was we well were what when where which while who why will with would yeah yes you your yours going thanks
+thank today tomorrow yesterday week time good great kind sort lot also still pretty actually basically oh wait
+hey alright hmm yep nope guys wanna gotta stuff anyway everyone everybody someone somebody nothing anything
+little bunch whole kinda totally literally exactly probably definitely cool nice awesome god gosh
+interested laughter applause music""".split())
+
+
+def _topics_from_transcript(segments: list[dict], n: int) -> list[dict]:
+    """The transcript's most-mentioned names and words (speakers and filler words excluded), each with the line
+    where it was first said as its quote. Grounded by construction."""
+    speakers = {norm(s.get("speaker", "")) for s in segments if s.get("speaker")}
+    # drop "Name:" prefixes and sound tags such as [laughter] / (music) before counting
+    lines = [(s, re.sub(r"[\[(][^\])]{0,40}[\])]", " ", re.sub(r"^[A-Z][\w .'-]{0,30}:\s*", "", s.get("text", ""))))
+             for s in segments]
+    for s, body in lines:
+        m = re.match(r"^([A-Z][\w.'-]{0,30}):\s", s.get("text", ""))
+        if m:
+            speakers.add(norm(m.group(1)))
+    counts: Counter = Counter()
+    for _, body in lines:
+        # capitalised words count as names only mid-sentence ("the Knicks were..."), not at a sentence start
+        # ("Wait, ..."), and never contractions ("That's", "I'm")
+        for m in re.finditer(r"\b(?:[A-Z][a-z0-9-]+)(?:\s+[A-Z][a-z0-9-]+){0,2}\b(?!')", body):
+            before = body[:m.start()].rstrip()
+            if not before or before[-1] in ".!?:;\"“":
+                continue
+            phrase = m.group(0)
+            if norm(phrase) not in speakers and phrase.lower() not in _STOP:
+                counts[phrase] += 2                                   # names and capitalised phrases weigh more
+        for w in re.findall(r"\b[a-z][a-z-]{4,}\b(?!')", body):
+            if w not in _STOP and norm(w) not in speakers:
+                counts[w] += 1
+    out = []
+    for phrase, _ in counts.most_common():
+        if len(out) >= n:
+            break
+        seg, body = next(((s, b) for s, b in lines if phrase.lower() in b.lower()), (None, None))
+        if not seg:
+            continue
+        words = body.split()
+        i = next((k for k, w in enumerate(words) if phrase.split()[0].lower() in w.lower()), 0)
+        quote = " ".join(words[max(0, i - 5): i + 7])
+        title = phrase if phrase[0].isupper() else phrase.capitalize()
+        out.append({"title": title, "action": "add", "description": f"Discussed in this meeting: “{quote}”",
+                    "key_points": [], "relations": [], "status": "", "subtasks": [], "depends_on": [],
+                    "impact": "", "uncertainty": "", "evidence": [{"start": seg.get("start", 0.0),
+                                                                   "end": seg.get("end", 0.0), "quote": quote}]})
+    return out
 
 
 def drop_ungrounded_features(draft: dict, segments: list[dict]) -> None:
@@ -377,5 +483,6 @@ def extract_draft(llm: BaseLLM, segments: list[dict], title: str, existing_title
         draft = heuristic.extract(segments, title)
         check_evidence(draft, segments)
         drop_ungrounded_features(draft, segments)
+        ensure_min_features(llm, draft, segments)
         return draft
     return combine_parts(llm, extract_part(llm, segments, existing_titles, max_chars), segments, title)
