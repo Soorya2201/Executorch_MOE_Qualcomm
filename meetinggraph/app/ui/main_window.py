@@ -1,16 +1,21 @@
-"""Main window: projects | To review / Meetings / Features / Map | Ask. A banner always says what to do next."""
+"""Main window: app bar (To review / Meetings / Features / Map), then projects | page | Ask.
+
+A banner always says what to do next.
+"""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QThreadPool, QTimer, QUrl
 from PySide6.QtGui import QAction, QDesktopServices
-from PySide6.QtWidgets import (QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-                               QMainWindow, QMessageBox, QPushButton, QSplitter, QStatusBar, QTabWidget,
-                               QTextBrowser, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QButtonGroup, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
+                               QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton, QSplitter,
+                               QStatusBar, QTabWidget, QTextBrowser, QToolButton, QVBoxLayout,
+                               QWidget)
 
 from ..pipeline.query import answer
 from ..workspace.graph import build_graph
 from .add_meeting import AddMeetingDialog
 from .common import STAGE_COLOR, STAGE_TEXT, STATUS_COLOR, Job, dot_icon, esc
+from . import theme
 from .graph_view import GraphView
 from .pages import feature_html, meeting_html
 from .review import ReviewPanel
@@ -30,18 +35,77 @@ class MainWindow(QMainWindow):
         self.project_id: str | None = None
         self.busy: set[str] = set()
         self._banner_action = None
-        self.setWindowTitle("MeetingGraph — private project memory")
-        self.resize(1440, 900)
+        self.setWindowTitle("MeetingGraph")
+        self.resize(1480, 920)
+        self.setMinimumSize(1100, 700)
 
         central = QWidget()
-        cl = QVBoxLayout(central)
-        cl.setContentsMargins(10, 10, 10, 4)
+        outer = QVBoxLayout(central)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
         self.setCentralWidget(central)
+
+        # app bar: brand · navigation · model status · more
+        bar = QFrame()
+        bar.setObjectName("appbar")
+        bar.setFixedHeight(60)
+        al = QHBoxLayout(bar)
+        al.setContentsMargins(20, 0, 16, 0)
+        al.setSpacing(6)
+        logo = QLabel()
+        logo.setPixmap(dot_icon(theme.ACCENT, 28).pixmap(22, 22))
+        al.addWidget(logo)
+        brand = QLabel("MeetingGraph")
+        brand.setObjectName("brand")
+        al.addWidget(brand)
+        al.addSpacing(28)
+        self.nav_group = QButtonGroup(self)
+        self.nav_group.setExclusive(True)
+        self.nav: dict[int, QPushButton] = {}
+        for idx, text in ((TAB_REVIEW, "To review"), (TAB_MEETINGS, "Meetings"), (TAB_FEATURES, "Features"),
+                          (TAB_MAP, "Map")):
+            b = QPushButton(text)
+            b.setObjectName("nav")
+            b.setCheckable(True)
+            b.setCursor(Qt.PointingHandCursor)
+            b.clicked.connect(lambda _=False, i=idx: self.go(i))
+            self.nav_group.addButton(b)
+            self.nav[idx] = b
+            al.addWidget(b)
+        al.addStretch(1)
+        self.chip_llm = self._chip(f"AI  ·  {ctx.llm.label}", bool(getattr(ctx, "llm_problem", "")))
+        self.chip_asr = self._chip(f"Speech  ·  {ctx.asr.label}", False)
+        for chip in (self.chip_llm, self.chip_asr, self._chip("On this laptop only", False, good=True)):
+            al.addWidget(chip, 0, Qt.AlignVCenter)
+        al.addSpacing(6)
+        more = QToolButton()
+        more.setText("•••")
+        more.setObjectName("more")
+        more.setPopupMode(QToolButton.InstantPopup)
+        more.setToolTip("More")
+        m = QMenu(more)
+        for text, fn in (("Open workspace folder", lambda: QDesktopServices.openUrl(
+                              QUrl.fromLocalFile(str(ctx.layout.root)))),
+                         ("Show master log of this project", self.show_log),
+                         ("Rebuild search index", self.rebuild_index)):
+            a = QAction(text, self)
+            a.triggered.connect(fn)
+            m.addAction(a)
+        more.setMenu(m)
+        al.addWidget(more)
+        outer.addWidget(bar)
+
+        work = QWidget()
+        cl = QVBoxLayout(work)
+        cl.setContentsMargins(16, 14, 16, 8)
+        cl.setSpacing(12)
+        outer.addWidget(work, 1)
 
         # banner: what to do next
         self.banner = QFrame()
         self.banner.setObjectName("banner")
         bl = QHBoxLayout(self.banner)
+        bl.setContentsMargins(18, 12, 12, 12)
         self.banner_text = QLabel()
         self.banner_text.setWordWrap(True)
         self.banner_text.setTextFormat(Qt.RichText)
@@ -52,42 +116,53 @@ class MainWindow(QMainWindow):
         cl.addWidget(self.banner)
 
         root = QSplitter()
+        root.setChildrenCollapsible(False)
         cl.addWidget(root, 1)
 
         # left: projects + main actions
-        left = QWidget()
+        left = QFrame()
+        left.setObjectName("sidebar")
+        left.setMinimumWidth(220)
         ll = QVBoxLayout(left)
-        ll.setContentsMargins(0, 0, 6, 0)
+        ll.setContentsMargins(14, 14, 14, 14)
+        ll.setSpacing(8)
         self.b_add = QPushButton("＋  Add a meeting")
         self.b_add.setObjectName("primary")
         self.b_add.setMinimumHeight(40)
         ll.addWidget(self.b_add)
         self.b_record = QPushButton("●  Record a live meeting")
         ll.addWidget(self.b_record)
-        lbl = QLabel("Projects")
-        lbl.setObjectName("h2")
-        ll.addSpacing(8)
+        ll.addSpacing(10)
+        lbl = QLabel("PROJECTS")
+        lbl.setObjectName("eyebrow")
         ll.addWidget(lbl)
         self.projects = QListWidget()
+        self.projects.setObjectName("bare")
         ll.addWidget(self.projects, 1)
         self.b_new = QPushButton("＋  New project")
+        self.b_new.setObjectName("ghost")
         ll.addWidget(self.b_new)
         root.addWidget(left)
 
-        # center: tabs
+        # center: pages (the tab bar is hidden; the app bar navigates)
         self.tabs = QTabWidget()
+        self.tabs.tabBar().hide()
         rev = QWidget()
         rl = QHBoxLayout(rev)
         rl.setContentsMargins(0, 0, 0, 0)
         rsplit = QSplitter()
+        rsplit.setChildrenCollapsible(False)
         rl.addWidget(rsplit)
-        sl = QWidget()
+        sl = QFrame()
+        sl.setObjectName("panel")
+        sl.setMinimumWidth(220)
         sll = QVBoxLayout(sl)
-        sll.setContentsMargins(6, 6, 0, 6)
-        t = QLabel("Meetings waiting for you")
-        t.setObjectName("h2")
+        sll.setContentsMargins(12, 14, 12, 12)
+        t = QLabel("WAITING FOR YOU")
+        t.setObjectName("eyebrow")
         sll.addWidget(t)
         self.sessions = QListWidget()
+        self.sessions.setObjectName("bare")
         self.sessions.setWordWrap(True)
         self.sessions.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         sll.addWidget(self.sessions, 1)
@@ -97,51 +172,58 @@ class MainWindow(QMainWindow):
         rsplit.setSizes([260, 900])
         self.tabs.addTab(rev, "To review")
 
-        tl = QWidget()
-        tll = QHBoxLayout(tl)
-        tsplit = QSplitter()
-        tll.addWidget(tsplit)
+        def list_and_view(lst, view, extra=None):
+            page = QWidget()
+            pl = QHBoxLayout(page)
+            pl.setContentsMargins(0, 0, 0, 0)
+            split = QSplitter()
+            split.setChildrenCollapsible(False)
+            pl.addWidget(split)
+            lcard = QFrame()
+            lcard.setObjectName("panel")
+            lcard.setMinimumWidth(220)
+            lcl = QVBoxLayout(lcard)
+            lcl.setContentsMargins(12, 12, 12, 12)
+            if extra is not None:
+                lcl.addWidget(extra)
+            lst.setObjectName("bare")
+            lcl.addWidget(lst, 1)
+            split.addWidget(lcard)
+            split.addWidget(view)
+            split.setSizes([260, 800])
+            return page
+
         self.meetings = QListWidget()
         self.meeting_view = QTextBrowser()
         self.meeting_view.setOpenLinks(False)
-        tsplit.addWidget(self.meetings)
-        tsplit.addWidget(self.meeting_view)
-        tsplit.setSizes([260, 800])
-        self.tabs.addTab(tl, "Meetings")
+        self.tabs.addTab(list_and_view(self.meetings, self.meeting_view), "Meetings")
 
-        fw = QWidget()
-        fl = QHBoxLayout(fw)
-        fsplit = QSplitter()
-        fl.addWidget(fsplit)
-        fleft = QWidget()
-        fll = QVBoxLayout(fleft)
-        fll.setContentsMargins(0, 0, 0, 0)
         self.feature_filter = QLineEdit()
         self.feature_filter.setPlaceholderText("Search features…")
+        self.feature_filter.setClearButtonEnabled(True)
         self.features = QListWidget()
-        fll.addWidget(self.feature_filter)
-        fll.addWidget(self.features, 1)
         self.feature_view = QTextBrowser()
         self.feature_view.setOpenLinks(False)
-        fsplit.addWidget(fleft)
-        fsplit.addWidget(self.feature_view)
-        fsplit.setSizes([260, 800])
-        self.tabs.addTab(fw, "Features")
+        self.tabs.addTab(list_and_view(self.features, self.feature_view, self.feature_filter), "Features")
 
         self.graph = GraphView()
         self.tabs.addTab(self.graph, "Map")
         root.addWidget(self.tabs)
 
         # right: ask
-        right = QWidget()
+        right = QFrame()
+        right.setObjectName("panel")
+        right.setMinimumWidth(280)
         rr = QVBoxLayout(right)
-        rr.setContentsMargins(6, 0, 0, 0)
+        rr.setContentsMargins(16, 16, 16, 14)
+        rr.setSpacing(8)
         self.chat_title = QLabel("Ask a question")
         self.chat_title.setObjectName("h2")
         self.pending = QLabel("")
         self.pending.setWordWrap(True)
-        self.pending.setStyleSheet("color:#9a6700;")
+        self.pending.setObjectName("warnText")
         self.chat = QTextBrowser()
+        self.chat.setObjectName("bare")
         self.chat.setOpenLinks(False)
         self.ask = QLineEdit()
         self.ask.setPlaceholderText("e.g. What changed in offline sync?")
@@ -156,25 +238,16 @@ class MainWindow(QMainWindow):
         rr.addLayout(row)
         note = QLabel("Answers come only from this project's saved meetings and features, with sources.")
         note.setWordWrap(True)
-        note.setObjectName("muted")
+        note.setObjectName("small")
         rr.addWidget(note)
         root.addWidget(right)
-        root.setSizes([230, 890, 320])
+        root.setSizes([240, 900, 330])
 
         sb = QStatusBar()
+        sb.setSizeGripEnabled(False)
         self.setStatusBar(sb)
-        self.models_lbl = QLabel(f"AI model: {ctx.llm.label}   ·   Speech: {ctx.asr.label}   ·   "
-                                 "Nothing leaves this laptop")
-        sb.addPermanentWidget(self.models_lbl)
-
-        m = self.menuBar().addMenu("&Workspace")
-        for text, fn in (("Open workspace folder", lambda: QDesktopServices.openUrl(
-                              QUrl.fromLocalFile(str(ctx.layout.root)))),
-                         ("Show master log of this project", self.show_log),
-                         ("Rebuild search index", self.rebuild_index)):
-            a = QAction(text, self)
-            a.triggered.connect(fn)
-            m.addAction(a)
+        self.tabs.currentChanged.connect(self._sync_nav)
+        self.go(TAB_REVIEW)
 
         # wiring
         self.projects.currentItemChanged.connect(self._on_project)
@@ -197,6 +270,41 @@ class MainWindow(QMainWindow):
         self.poll.timeout.connect(self.refresh_sessions)
         self.poll.start(1500)
         self.refresh_all()
+
+    # ---------- navigation ----------
+    def _chip(self, text: str, warn: bool, good: bool = False) -> QFrame:
+        fr = QFrame()
+        fr.setObjectName("chipGood" if good else "chipWarn" if warn else "chip")
+        fr.setFixedHeight(28)
+        lay = QHBoxLayout(fr)
+        lay.setContentsMargins(10, 4, 12, 4)
+        lay.setSpacing(6)
+        dot = QLabel()
+        dot.setPixmap(dot_icon(theme.GOOD if good else theme.WARN if warn else theme.ACCENT, 12).pixmap(8, 8))
+        lb = QLabel(text)
+        lb.setObjectName("chipGoodText" if good else "chipText")
+        lay.addWidget(dot)
+        lay.addWidget(lb)
+        if warn:
+            fr.setToolTip(f"AI model not available: {getattr(self.ctx, 'llm_problem', '')}")
+        return fr
+
+    def go(self, idx: int):
+        self.tabs.setCurrentIndex(idx)
+        self.nav[idx].setChecked(True)
+
+    def _sync_nav(self, idx: int):
+        if idx in self.nav:
+            self.nav[idx].setChecked(True)
+
+    def bring_to_front(self):
+        """Restore from minimised/hidden and focus (tray, second launch, notifications)."""
+        if self.isMinimized():
+            self.showNormal()
+        else:
+            self.show()
+        self.raise_()
+        self.activateWindow()
 
     # ---------- banner ----------
     def update_banner(self, sessions=None):
@@ -232,7 +340,7 @@ class MainWindow(QMainWindow):
                     "Features and the Map, or ask a question on the right.")
             btn, act = "Add a meeting", self.add_meeting
         if llm_problem:
-            text += f"<br><span style='color:#9a6700'>AI model not available: {esc(llm_problem)} " \
+            text += f"<br><span style='color:{theme.WARN}'>AI model not available: {esc(llm_problem)} " \
                     "Using simple rules until it is fixed.</span>"
         self.banner.setObjectName("bannerWarn" if warn else "banner")
         self.banner.style().unpolish(self.banner)
@@ -290,7 +398,7 @@ class MainWindow(QMainWindow):
             it.setFlags(Qt.NoItemFlags)
             self.sessions.addItem(it)
         self.sessions.blockSignals(False)
-        self.tabs.setTabText(TAB_REVIEW, f"To review ({ready})" if ready else "To review")
+        self.nav[TAB_REVIEW].setText(f"To review  ·  {ready}" if ready else "To review")
         if cur and not any(s["id"] == cur for s in sessions):
             self.review.clear()
         elif changed_current:
@@ -331,7 +439,7 @@ class MainWindow(QMainWindow):
             it.setData(Qt.UserRole, m["id"])
             self.meetings.addItem(it)
         if not ms:
-            self.meeting_view.setHtml("<p style='color:#57606a'>No saved meetings yet. Add one and save it from "
+            self.meeting_view.setHtml("<p style='color:#667085'>No saved meetings yet. Add one and save it from "
                                       "“To review”.</p>")
 
     def refresh_features(self, *_):
@@ -349,7 +457,7 @@ class MainWindow(QMainWindow):
             it.setData(Qt.UserRole, f["id"])
             self.features.addItem(it)
         if not feats:
-            self.feature_view.setHtml("<p style='color:#57606a'>No features yet. They appear after you save a "
+            self.feature_view.setHtml("<p style='color:#667085'>No features yet. They appear after you save a "
                                       "meeting.</p>")
 
     def refresh_graph(self):
@@ -389,7 +497,7 @@ class MainWindow(QMainWindow):
         for i in range(lst.count()):
             if lst.item(i).data(Qt.UserRole) == iid:
                 lst.setCurrentRow(i)
-                self.tabs.setCurrentIndex(tab)
+                self.go(tab)
                 return
 
     def show_log(self):
@@ -463,7 +571,7 @@ class MainWindow(QMainWindow):
             self._cur_state = None
 
     def select_session(self, sid: str):
-        self.tabs.setCurrentIndex(TAB_REVIEW)
+        self.go(TAB_REVIEW)
         self._last_sig = None
         self.refresh_sessions()
         for i in range(self.sessions.count()):
@@ -571,9 +679,9 @@ class MainWindow(QMainWindow):
         box.addButton("Done", QMessageBox.RejectRole)
         box.exec()
         if box.clickedButton() is b_map:
-            self.tabs.setCurrentIndex(TAB_MAP)
+            self.go(TAB_MAP)
         elif box.clickedButton() is b_feat:
-            self.tabs.setCurrentIndex(TAB_FEATURES)
+            self.go(TAB_FEATURES)
 
     # ---------- chat ----------
     def ask_question(self):
@@ -594,10 +702,10 @@ class MainWindow(QMainWindow):
                 return
             cites = "".join(
                 f"<br>[{c['n']}] <a href='open:{c['kind']}:{c['doc_id']}'>{esc(c['title'])}</a> "
-                f"<span style='color:#57606a'>({c['kind']})</span>" for c in res["citations"])
+                f"<span style='color:#667085'>({c['kind']})</span>" for c in res["citations"])
             body = esc(res["answer"]).replace("\n", "<br>")
-            src = f"<br><span style='color:#57606a'>Sources:</span>{cites}" if cites else ""
+            src = f"<br><span style='color:#667085'>Sources:</span>{cites}" if cites else ""
             self.chat.append(f"<p><b>Answer:</b> {body}{src}</p><hr>")
 
         self.model_pool.start(Job(lambda: answer(self.ctx.store, self.ctx.llm, pid, q), on_done=done,
-                                  on_error=lambda m: self.chat.append(f"<p style='color:#cf222e'>{esc(m)}</p>")))
+                                  on_error=lambda m: self.chat.append(f"<p style='color:#d92d20'>{esc(m)}</p>")))

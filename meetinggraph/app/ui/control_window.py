@@ -47,10 +47,10 @@ class ControlWindow(QWidget):
         lay.addLayout(g)
 
         self.state = QLabel("Not recording")
-        self.state.setStyleSheet("font-weight:600;")
+        self.state.setObjectName("h2")
         self.health = QLabel("")
         self.health.setWordWrap(True)
-        self.health.setStyleSheet("color:#b26a00;")
+        self.health.setObjectName("warnText")
         lay.addWidget(self.state)
         lay.addWidget(self.health)
 
@@ -66,7 +66,7 @@ class ControlWindow(QWidget):
         tip = QLabel("Tell participants you are recording. Hide this window before screen sharing; "
                      "Stop is also in the tray menu.")
         tip.setWordWrap(True)
-        tip.setStyleSheet("color:#666;font-size:11px;")
+        tip.setObjectName("small")
         lay.addWidget(tip)
 
         self.btn.clicked.connect(self.toggle)

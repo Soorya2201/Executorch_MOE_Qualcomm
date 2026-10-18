@@ -106,7 +106,7 @@ class GraphView(QWidget):
         sl = QVBoxLayout(side)
         self.reason = QLabel("Click an edge or a row to see why it exists.")
         self.reason.setWordWrap(True)
-        self.reason.setStyleSheet("padding:6px;background:#f5f5f5;border-radius:4px;color:#222;")
+        self.reason.setObjectName("hint")
         legend = QLabel("<span style='color:#e53935'>━</span> depends on &nbsp; "
                         "<span style='color:#90a4ae'>╍</span> meeting updated feature &nbsp; "
                         "<span style='color:#8e24aa'>┈</span> meetings share a feature<br>"

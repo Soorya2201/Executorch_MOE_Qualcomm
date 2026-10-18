@@ -6,40 +6,53 @@ llm:
   # heuristic          = no model; rule-based extraction (works immediately, for plumbing tests)
   # ollama             = local Ollama server on 127.0.0.1 (dev laptop; CPU/GPU, NOT the NPU)
   # executorch_runner  = ExecuTorch runner executable (Snapdragon NPU path, set up on the Dell)
-  backend: ollama               # Qwen 2.5 3B through Ollama; falls back to rules if Ollama is not running
+  backend: executorch_runner    # Phi-4-mini W8A16 on the Hexagon NPU (ExecuTorch QNN)
   label: ""                     # optional text shown in the app; empty = automatic
-  max_transcript_chars_per_chunk: 6000
+  # Phi-4-mini was exported with a 2048-token context (prompt + reply). 2500 chars (~700 tokens) of
+  # transcript + the FEATURES prompt leaves ~800 tokens for the JSON reply.
+  max_transcript_chars_per_chunk: 2500
   ollama:
     url: http://127.0.0.1:11434
     model: qwen2.5:3b-instruct   # bigger/better: qwen2.5:7b-instruct (needs ~6 GB RAM)
     timeout_s: 300
     num_ctx: 8192               # context window; Ollama's small default would cut long transcripts
   executorch_runner:
-    # Filled in on the Snapdragon laptop after the model gate. Example shape only:
-    # command: ["C:/path/llama_runner.exe", "--model_path", "C:/path/model.pte",
-    #           "--tokenizer_path", "C:/path/tokenizer.model", "--prompt_file", "{prompt_file}"]
-    # Placeholders: {prompt_file} {prompt} {output_file} {max_tokens}
+    # qnn_llama_runner mode: the app builds the command (sizes --seq_len per prompt, strips the chat template).
+    # The runner folder must also hold qnn_executorch_backend.dll, QnnHtp*.dll, QnnSystem.dll and the v73 skel.
+    runner: C:/et/llm/npu-run/qnn_llama_runner.exe
+    model_path: C:/et/llm/phi4mini_w8a16_2k/kv_llama_qnn.pte   # v2 (16-bit KV): C:/et/llm/phi4mini_w8a16kv16_2k/...
+    tokenizer_path: C:/et/llm/phi4mini_w8a16_2k/tokenizer.json
+    decoder_model_version: phi_4_mini
+    max_seq_len: 2048           # must match the export's --max_seq_len
+    # Generic alternative (leave runner empty): command with {prompt_file} {prompt} {output_file} {max_tokens}
     command: []
     cwd: ""
-    timeout_s: 300
-    verified_on_npu: false      # set true only after profiling shows QNN/HTP delegation
+    timeout_s: 600              # a ~1300-token prompt is read at ~12 tok/s in kv mode
+    verified_on_npu: true       # 2026-10-17: 8 QnnBackend delegate calls, NPU compute engine 100% during runs
 
 asr:
   # none               = no speech recognition; import or type transcripts
   # faster_whisper     = local Whisper on CPU (dev laptop)
   # executorch_runner  = ExecuTorch ASR runner (Snapdragon NPU path)
-  backend: none
+  backend: executorch_runner    # Whisper-small W8A16 on the Hexagon NPU (ExecuTorch QNN)
   label: ""
   faster_whisper:
     model: base.en              # tiny.en | base.en | small.en ...
     compute_type: int8
     device: cpu
   executorch_runner:
-    # Placeholders: {audio_file} {output_file}; output JSON [{"start","end","text"}] or text on stdout
+    # qnn_whisper_runner mode: WAV -> windows -> numpy log-mel -> ONE runner call for all windows.
+    runner: C:/et/stt/npu-run/qnn_whisper_runner.exe
+    model_path: C:/et/stt/whisper_small/whisper_qnn_16a8w.pte
+    tokenizer_path: C:/et/stt/whisper_small/tokenizer.json
+    window_s: 20                # <= 30; shorter keeps each window's text within max_tokens
+    max_tokens: 128             # decoder length the model was exported with (--max_seq_len 128)
+    silence_rms: 0.003          # skip silent windows (Whisper invents text on silence)
+    # Generic alternative (leave runner empty): command with {audio_file} {output_file}
     command: []
     cwd: ""
     timeout_s: 600
-    verified_on_npu: false
+    verified_on_npu: true       # 2026-10-17: encoder and decoder are each one QnnBackend delegate call
 
 audio:
   samplerate: 16000

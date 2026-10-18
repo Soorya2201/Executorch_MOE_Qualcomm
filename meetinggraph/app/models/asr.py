@@ -6,9 +6,12 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import subprocess
 import tempfile
 from pathlib import Path
+
+import numpy as np
 
 
 class ASRError(RuntimeError):
@@ -79,24 +82,88 @@ class FasterWhisperASR(BaseASR):
         return out
 
 
+_TAG = re.compile(r"<\|[^|]*\|>")  # Whisper control tokens: <|en|><|transcribe|>...<|endoftext|>
+
+
 class ExecuTorchRunnerASR(BaseASR):
-    """Configured runner. Placeholders: {audio_file} {output_file}.
-    The runner (or a small wrapper script you write on the Dell) must write JSON
-    [{"start":..,"end":..,"text":..}] to {output_file}, or plain text to stdout.
+    """Speech-to-text with an ExecuTorch Whisper model on the NPU. Two modes:
+
+    - qnn_whisper_runner (set ``runner`` + ``model_path`` + ``tokenizer_path``): the WAV is cut into
+      windows, each turned into a log-mel tensor in numpy, and ALL windows go through ONE runner call,
+      so the model loads once per recording. Encoder and decoder run on the Hexagon NPU.
+    - generic ``command`` with {audio_file} {output_file}: the command writes
+      [{"start","end","text"}] JSON to {output_file}, or plain text to stdout.
     """
     name = "executorch_runner"
 
     def __init__(self, command: list[str], cwd: str = "", timeout_s: int = 600,
-                 verified_on_npu: bool = False, label: str = ""):
+                 verified_on_npu: bool = False, label: str = "", runner: str = "", model_path: str = "",
+                 tokenizer_path: str = "", window_s: float = 20.0, max_tokens: int = 128,
+                 silence_rms: float = 0.003):
         super().__init__(label)
-        if not command:
-            raise ASRError("asr.executorch_runner.command is empty in config.yaml.")
+        self.runner, self.model_path, self.tokenizer_path = runner, model_path, tokenizer_path
+        if runner:
+            for p in (runner, model_path, tokenizer_path):
+                if not Path(p).exists():
+                    raise ASRError(f"ExecuTorch file not found: {p}")
+        elif not command:
+            raise ASRError("Set asr.executorch_runner.runner/model_path/tokenizer_path (or command) in config.yaml.")
+        # window_s <= 30 (Whisper's input). Shorter windows keep each window's text within max_tokens,
+        # the decoder length the model was exported with.
+        self.window_s, self.max_tokens, self.silence_rms = min(float(window_s), 30.0), max_tokens, silence_rms
         self.command, self.cwd, self.timeout, self.verified = command, cwd or None, timeout_s, verified_on_npu
 
     def default_label(self) -> str:
-        return "ExecuTorch ASR (NPU, verified)" if self.verified else "ExecuTorch ASR (NPU not yet verified)"
+        what = Path(self.model_path).parent.name if self.runner else "ExecuTorch ASR"
+        return f"{what} on the NPU (verified)" if self.verified else f"{what} (NPU not yet verified)"
+
+    def _qnn_transcribe(self, path: str) -> list[dict]:
+        from .whisper_features import SAMPLE_RATE, log_mel, read_wav, to_16k
+
+        try:
+            audio, rate = read_wav(path)
+        except (OSError, ValueError) as e:
+            raise ASRError(f"Cannot read audio {path}: {e}") from e
+        audio = to_16k(audio, rate)
+        step = int(self.window_s * SAMPLE_RATE)
+        windows = []  # (index, start_s, end_s) of non-silent windows
+        with tempfile.TemporaryDirectory(prefix="mg_asr_") as td:
+            tdp = Path(td)
+            (tdp / "outputs").mkdir()  # the runner does not create it and silently writes nothing
+            lines = []
+            for i, s in enumerate(range(0, len(audio), step)):
+                chunk = audio[s:s + step]
+                if len(chunk) == 0 or float(np.sqrt(np.mean(chunk ** 2))) < self.silence_rms:
+                    continue  # silent window: Whisper tends to hallucinate text on silence
+                k = len(windows)
+                log_mel(chunk).tofile(tdp / f"in_{k}.raw")
+                lines.append(f"in_{k}.raw")
+                windows.append((k, s / SAMPLE_RATE, min(len(audio), s + step) / SAMPLE_RATE))
+            if not windows:
+                return []
+            # LF line endings: the runner does not strip '\r'.
+            (tdp / "input_list.txt").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+            args = [self.runner, "--model_path", self.model_path, "--tokenizer_json_path", self.tokenizer_path,
+                    "--input_list_path", "input_list.txt", "--seq_len", str(self.max_tokens),
+                    "--output_folder_path", "outputs"]
+            try:
+                p = subprocess.run(args, cwd=td, capture_output=True, text=True, timeout=self.timeout,
+                                   encoding="utf-8", errors="replace")
+            except (OSError, subprocess.TimeoutExpired) as e:
+                raise ASRError(f"NPU Whisper runner failed: {e}") from e
+            if p.returncode != 0:
+                raise ASRError(f"NPU Whisper runner exited {p.returncode}: {(p.stderr or p.stdout)[-800:]}")
+            segs = []
+            for k, start, end in windows:
+                f = tdp / "outputs" / f"output_{k}.txt"
+                text = _TAG.sub("", f.read_text(encoding="utf-8", errors="replace")).strip() if f.exists() else ""
+                if text:
+                    segs.append({"start": round(start, 2), "end": round(end, 2), "text": text, "confidence": 1.0})
+            return segs
 
     def transcribe(self, path: str) -> list[dict]:
+        if self.runner:
+            return self._qnn_transcribe(path)
         with tempfile.TemporaryDirectory(prefix="mg_asr_") as td:
             of = Path(td) / "out.json"
             args = [a.replace("{audio_file}", str(path)).replace("{output_file}", str(of)) for a in self.command]
@@ -128,5 +195,7 @@ def make_asr(cfg: dict) -> BaseASR:
     if b == "executorch_runner":
         e = c["executorch_runner"]
         return ExecuTorchRunnerASR(e.get("command") or [], e.get("cwd", ""), e.get("timeout_s", 600),
-                                   e.get("verified_on_npu", False), label)
+                                   e.get("verified_on_npu", False), label, e.get("runner", ""),
+                                   e.get("model_path", ""), e.get("tokenizer_path", ""),
+                                   e.get("window_s", 20.0), e.get("max_tokens", 128), e.get("silence_rms", 0.003))
     raise ASRError(f"Unknown asr.backend {b!r}")
