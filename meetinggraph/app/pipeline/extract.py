@@ -349,7 +349,23 @@ def combine_parts(llm: BaseLLM, parts: list[dict], segments: list[dict], title: 
         draft["summary"] = parts[0]["summary"]
     draft["title"] = title
     check_evidence(draft, segments)
+    drop_ungrounded_features(draft, segments)
     return draft
+
+
+def drop_ungrounded_features(draft: dict, segments: list[dict]) -> None:
+    """Only features the transcript backs reach Review: the feature's name is said, or one of its quotes is found
+    word for word. Anything else (a copied prompt example, an invented item) is removed, not shown switched off.
+    The removed titles are kept in the draft file (dropped_features) for debugging; the UI never shows them."""
+    text = norm(" ".join(s.get("text", "") for s in segments))
+    kept, dropped = [], []
+    for f in draft["feature_mentions"]:
+        named = bool(norm(f["title"])) and norm(f["title"]) in text
+        quoted = any(e.get("supported") for e in f.get("evidence", []))
+        (kept if named or quoted else dropped).append(f)
+    draft["feature_mentions"] = kept
+    if dropped:
+        draft.setdefault("dropped_features", []).extend(f["title"] for f in dropped)
 
 
 
@@ -360,5 +376,6 @@ def extract_draft(llm: BaseLLM, segments: list[dict], title: str, existing_title
     if llm.heuristic:
         draft = heuristic.extract(segments, title)
         check_evidence(draft, segments)
+        drop_ungrounded_features(draft, segments)
         return draft
     return combine_parts(llm, extract_part(llm, segments, existing_titles, max_chars), segments, title)

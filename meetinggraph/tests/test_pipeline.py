@@ -70,9 +70,9 @@ def test_two_requests_and_evidence_check():
     d = extract_draft(llm, SEGS, "Sync", ["Login"])
     assert len(llm.prompts) == 2
     assert d["summary"] == "We plan offline sync."
-    sync, tele = d["feature_mentions"]
+    (sync,) = d["feature_mentions"]                        # the invented "Teleport" never reaches Review
     assert sync["evidence"][0]["supported"] is True and sync["evidence"][0]["start"] == 10
-    assert tele["evidence"][0]["supported"] is False      # hallucination gets flagged
+    assert d["dropped_features"] == ["Teleport"]
     assert "Login" in llm.prompts[1]                       # existing features are given to the model
 
 
@@ -97,7 +97,7 @@ def test_garbage_twice_gives_clear_error_with_raw_output():
 def test_notes_failure_does_not_block_features():
     llm = RoutedLLM(["nope", "nope"], [json.dumps(FEATS)])
     d = extract_draft(llm, SEGS, "Sync", [])
-    assert d["summary"] == "" and len(d["feature_mentions"]) == 2
+    assert d["summary"] == "" and [f["title"] for f in d["feature_mentions"]] == ["Offline sync"]  # Teleport: invented
 
 
 def test_transcript_is_data_not_instructions_in_prompt():

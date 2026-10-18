@@ -250,3 +250,18 @@ def test_record_opens_devices_off_the_ui_thread(tmp_path, monkeypatch):
     pill.rec = None
     pill.hide()
 
+
+# ---- features the transcript does not back never reach Review ----
+def test_features_not_in_the_transcript_are_removed():
+    from app.pipeline.transcript import from_text
+    segs = from_text("Ana: Did you see the Knicks game last night?\nBen: Yes, and then we watched a movie.")
+    draft = {"summary": "s", "decisions": [], "action_items": [], "open_questions": [],
+             "feature_mentions": [
+                 {"title": "Mitochondria", "evidence": [{"quote": "the powerhouse of the cell", "start": 0, "end": 0}]},
+                 {"title": "Knicks game", "evidence": []},                                   # its name is said
+                 {"title": "Movie night", "evidence": [{"quote": "we watched a movie", "start": 0, "end": 0}]},
+             ]}
+    ex.check_evidence(draft, segs)
+    ex.drop_ungrounded_features(draft, segs)
+    assert [f["title"] for f in draft["feature_mentions"]] == ["Knicks game", "Movie night"]
+    assert draft["dropped_features"] == ["Mitochondria"]
