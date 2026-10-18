@@ -14,6 +14,11 @@ from pathlib import Path
 import numpy as np
 
 
+# The app runs under pythonw (no console). Without this flag Windows opens a terminal window for every
+# runner .exe it starts (one per live-transcription batch while recording).
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
+
 class ASRError(RuntimeError):
     pass
 
@@ -34,6 +39,19 @@ class BaseASR:
 
     def transcribe(self, path: str) -> list[dict]:
         raise NotImplementedError
+
+    def transcribe_audio(self, audio) -> list[dict]:
+        """Transcribe 16 kHz mono float32 samples (used for live 30-second batches)."""
+        import wave
+        import numpy as np
+        with tempfile.TemporaryDirectory(prefix="mg_live_") as td:
+            p = Path(td) / "batch.wav"
+            with wave.open(str(p), "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(16000)
+                w.writeframes((np.clip(audio, -1, 1) * 32767).astype("<i2").tobytes())
+            return self.transcribe(str(p))
 
 
 class NoASR(BaseASR):
@@ -57,7 +75,14 @@ class FasterWhisperASR(BaseASR):
         self._model = None
 
     def default_label(self) -> str:
-        return f"faster-whisper {self.model_name} ({self.device.upper()})"
+        if not self.available:
+            return "Speech recognition not installed (pip install -r requirements-asr.txt)"
+        return f"Whisper {self.model_name} via faster-whisper ({self.device.upper()})"
+
+    @property
+    def available(self) -> bool:
+        import importlib.util
+        return importlib.util.find_spec("faster_whisper") is not None
 
     def _load(self):
         if self._model is None:
@@ -71,7 +96,13 @@ class FasterWhisperASR(BaseASR):
 
     def transcribe(self, path: str) -> list[dict]:
         model = self._load()
-        segs, _info = model.transcribe(path, vad_filter=True, beam_size=1)
+        return self.transcribe_audio(load_audio_16k(path))
+
+    def transcribe_audio(self, audio) -> list[dict]:
+        model = self._load()
+        if audio.size == 0:
+            return []
+        segs, _info = model.transcribe(audio, vad_filter=True, beam_size=1)
         out = []
         for s in segs:
             conf = math.exp(s.avg_logprob) if s.avg_logprob is not None else 0.0
@@ -83,6 +114,69 @@ class FasterWhisperASR(BaseASR):
 
 
 _TAG = re.compile(r"<\|[^|]*\|>")  # Whisper control tokens: <|en|><|transcribe|>...<|endoftext|>
+
+
+def _resample(x, rate: int, target: int = 16000):
+    import numpy as np
+    if rate == target or x.size == 0:
+        return x.astype(np.float32)
+    n = int(round(x.size * target / rate))
+    return np.interp(np.linspace(0, x.size - 1, n), np.arange(x.size), x).astype(np.float32)
+
+
+def _read_wav(path: str):
+    """Plain WAV reader (our own recordings): no PyAV needed."""
+    import wave
+    import numpy as np
+    with wave.open(str(path), "rb") as w:
+        ch, width, rate, n = w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getnframes()
+        raw = w.readframes(n)
+    if width == 2:
+        x = np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
+    elif width == 4:
+        x = np.frombuffer(raw, dtype="<i4").astype(np.float32) / 2147483648.0
+    elif width == 1:
+        x = (np.frombuffer(raw, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
+    else:
+        raise ASRError(f"Unsupported WAV sample width: {width * 8} bit")
+    if ch > 1:
+        x = x.reshape(-1, ch).mean(axis=1)
+    return _resample(x, rate)
+
+
+def _read_with_av(path: str):
+    """Other formats (mp3, m4a, ...) through PyAV. Works with old and new PyAV versions
+    (new PyAV removed the 'metadata_errors' argument that faster-whisper's own decoder passes)."""
+    import numpy as np
+    try:
+        import av
+    except ImportError as e:
+        raise ASRError("Can't read this audio format (PyAV missing). Use a .wav file.") from e
+    chunks = []
+    with av.open(str(path), mode="r") as container:
+        stream = container.streams.audio[0]
+        res = av.audio.resampler.AudioResampler(format="s16", layout="mono", rate=16000)
+        for frame in container.decode(stream):
+            for f in (res.resample(frame) or []):
+                chunks.append(f.to_ndarray().reshape(-1))
+        for f in (res.resample(None) or []):
+            chunks.append(f.to_ndarray().reshape(-1))
+    if not chunks:
+        return np.zeros(0, dtype=np.float32)
+    return (np.concatenate(chunks).astype(np.float32) / 32768.0)
+
+
+def load_audio_16k(path: str):
+    """Return mono float32 audio at 16 kHz."""
+    if str(path).lower().endswith(".wav"):
+        try:
+            return _read_wav(path)
+        except (ASRError, EOFError, Exception) as e:  # odd WAV (e.g. float/extensible): let PyAV try
+            try:
+                return _read_with_av(path)
+            except Exception:
+                raise ASRError(f"Could not read {Path(path).name}: {e}") from e
+    return _read_with_av(path)
 
 
 class ExecuTorchRunnerASR(BaseASR):
@@ -147,7 +241,7 @@ class ExecuTorchRunnerASR(BaseASR):
                     "--input_list_path", "input_list.txt", "--seq_len", str(self.max_tokens),
                     "--output_folder_path", "outputs"]
             try:
-                p = subprocess.run(args, cwd=td, capture_output=True, text=True, timeout=self.timeout,
+                p = subprocess.run(args, cwd=td, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=self.timeout,
                                    encoding="utf-8", errors="replace")
             except (OSError, subprocess.TimeoutExpired) as e:
                 raise ASRError(f"NPU Whisper runner failed: {e}") from e
@@ -168,7 +262,7 @@ class ExecuTorchRunnerASR(BaseASR):
             of = Path(td) / "out.json"
             args = [a.replace("{audio_file}", str(path)).replace("{output_file}", str(of)) for a in self.command]
             try:
-                p = subprocess.run(args, cwd=self.cwd, capture_output=True, text=True, timeout=self.timeout,
+                p = subprocess.run(args, cwd=self.cwd, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=self.timeout,
                                    encoding="utf-8", errors="replace")
             except (OSError, subprocess.TimeoutExpired) as e:
                 raise ASRError(f"ASR runner failed: {e}") from e

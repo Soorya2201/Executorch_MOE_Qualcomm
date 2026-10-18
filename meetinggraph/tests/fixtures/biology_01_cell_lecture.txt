@@ -1,0 +1,23 @@
+# Fictional lecture for testing. Project: Biology. Title: The cell
+[00:00:00-00:00:09] (remote) Today we are talking about the cell, the basic unit of life.
+[00:00:09-00:00:21] (remote) Every cell is surrounded by the cell membrane, a double layer of phospholipids that controls what goes in and out.
+[00:00:21-00:00:33] (remote) Inside, the nucleus holds the DNA, and the DNA carries the instructions for building every protein the cell makes.
+[00:00:33-00:00:46] (remote) Those instructions are copied into messenger RNA, which leaves the nucleus through the nuclear pores.
+[00:00:46-00:01:00] (remote) Ribosomes read the messenger RNA and join amino acids together, so protein synthesis depends on ribosomes.
+[00:01:00-00:01:13] (remote) Without ribosomes the instructions in the DNA would never become proteins.
+[00:01:13-00:01:28] (remote) Mitochondria are the powerhouse of the cell. They break down glucose with oxygen in cellular respiration and release energy as ATP.
+[00:01:28-00:01:40] (remote) Protein synthesis needs a lot of ATP, because every amino acid that is added costs energy.
+[00:01:40-00:01:52] (remote) So protein synthesis depends on mitochondria as well, since they supply that ATP.
+[00:01:52-00:02:06] (remote) Muscle cells have thousands of mitochondria because contraction uses so much ATP.
+[00:02:06-00:02:19] (remote) The endoplasmic reticulum is a network of membranes. The rough endoplasmic reticulum is covered in ribosomes.
+[00:02:19-00:02:33] (remote) Proteins made on the rough endoplasmic reticulum are folded there and then sent to the Golgi apparatus.
+[00:02:33-00:02:47] (remote) The Golgi apparatus modifies, sorts and packages proteins into vesicles, like a post office for the cell.
+[00:02:47-00:03:00] (remote) Some vesicles fuse with the cell membrane and release their proteins outside the cell. That is called exocytosis.
+[00:03:00-00:03:14] (remote) Lysosomes contain digestive enzymes and break down worn-out organelles and waste.
+[00:03:14-00:03:27] (remote) Plant cells also have chloroplasts, which capture light energy in photosynthesis and make glucose.
+[00:03:27-00:03:40] (remote) The glucose made by chloroplasts is the fuel that mitochondria break down, so the two organelles work as a pair.
+[00:03:40-00:03:52] (remote) Plant cells also have a cell wall made of cellulose that gives them a rigid shape.
+[00:03:52-00:04:05] (you) Why do red blood cells have no nucleus?
+[00:04:05-00:04:20] (remote) Good question. Losing the nucleus leaves more room for haemoglobin to carry oxygen, but it means they cannot repair themselves and live only about 120 days.
+[00:04:20-00:04:33] (remote) For next week, read chapter four on membrane transport.
+[00:04:33-00:04:40] (remote) Okay, that's all for today, see you next week.

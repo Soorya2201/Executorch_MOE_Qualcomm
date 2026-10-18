@@ -1,0 +1,145 @@
+# MeetingGraph, by the numbers
+
+> Every meeting you have is a decision you'll forget. MeetingGraph remembers them for you.
+> It listens, writes the notes, and links every decision to the project it changes.
+> **Entirely on your laptop's NPU. Nothing leaves the machine.**
+
+This file is the presentation source of truth: every number below was **measured on this laptop**, and it
+is updated whenever a new number lands. *Pending* means "being measured now"; nothing here is estimated
+unless it says so.
+
+Last updated: 2026-10-18
+
+---
+
+## 1. The problem
+
+- Teams meet, decide, and forget. Notes are written late, by one person, and never connected to the work.
+- Cloud meeting assistants fix the note-taking, but they **send every word you say to someone else's
+  server**. For a lot of meetings (HR, legal, health, unreleased products, classrooms) that is a non-starter.
+- Running AI locally was supposed to fix that, but on a normal laptop it **burns the CPU, the fan and the
+  battery**, and is slow.
+
+## 2. The one-line answer
+
+**A meeting memory that runs on the laptop's neural processor (NPU), so it is private by design, quiet,
+and fast enough to take notes while you are still talking.**
+
+## 3. The demo, in three acts
+
+1. **Record.** Press ● Record. A small capsule floats on top of everything; its sound wave pulses with your
+   voice. Every 30 seconds the new audio becomes transcript lines, on the NPU.
+2. **Review.** When you stop, the AI has already written the summary, decisions, action items and the
+   product features the meeting touched, each with the exact quote it came from. Anything it is unsure
+   about is a yellow question. You approve with one click; nothing is saved without you.
+3. **Remember.** Every saved meeting updates a living map of the project: which feature needs which, which
+   meeting changed what, and why. Ask a question and the answer cites its sources.
+
+**One more thing:** all of that ran with the laptop's Wi-Fi off.
+
+## 4. The numbers that matter
+
+| | |
+|---|---|
+| **0** | bytes sent to the cloud. Speech, notes, search and answers all run locally |
+| **100 %** | of the AI model's maths on the Hexagon NPU: 8 NPU calls, **0** operators falling back to the CPU |
+| **~9 %** | CPU use while the 3.8-billion-parameter model is generating (the NPU does the work) |
+| **12.2 tokens/s** | Phi-4-mini writing speed on the NPU |
+| **5.8× real time** | live speech-to-text: 30 s of audio transcribed in 5.0 s (Whisper-small on the NPU) |
+| **10.1 %** | word error rate, Whisper-small on the NPU (17.1 % for Whisper-tiny) |
+| **1.4 s** | answer time for a short request with the model kept loaded (was 7.3 s when it reloaded every time) |
+| **6.76 ms** | per image, DeepLabV3 segmentation on the NPU (first model brought up on this stack) |
+| **47.9 tokens/s** | Qwen3-0.6B on the NPU (small-model speed reference) |
+| **5.1 GB** | the whole 3.8B-parameter model on disk after 8-bit quantization (about 7.7 GB in bf16) |
+| **47** | automated tests, all passing |
+
+## 5. Under the hood: the models and what we did to them
+
+**Hardware:** Dell Latitude 7455 · Snapdragon X Elite X1E80100 · Hexagon NPU (HTP v73) · 32 GB RAM ·
+Windows 11 on ARM.
+**Software:** ExecuTorch 1.5.1 (Meta's on-device runtime) with the Qualcomm QNN backend, QAIRT 2.37.
+
+| Job | Model | What we did |
+|---|---|---|
+| Notes, features, answers | **Phi-4-mini-instruct** (Microsoft, 3.8B) | Post-training quantization to **W8A16** (8-bit weights, 16-bit activations), 8-bit KV cache, 2,048-token context, calibrated on our own samples, split into 8 shards, compiled to NPU binaries |
+| Speech to text | **Whisper-small** (OpenAI, 244M) | 16a8w quantization, exported encoder + decoder for the NPU, our own NumPy log-mel front end (matches Hugging Face to 1.4e-5) |
+| Reference | Whisper-tiny, Qwen3-0.6B, DeepLabV3 | Brought up first to prove the pipeline end to end |
+
+**Accuracy vs the original model** (10 fixed test prompts, same automatic checks):
+
+| Model | Passed | Speed | Same pass/fail as the original |
+|---|---|---|---|
+| Phi-4-mini, original bf16 on the CPU | 10/10 | slow, CPU-bound | n/a |
+| **Phi-4-mini W8A16 on the NPU (v1, shipped)** | **7/10** | **12.2 tok/s** | 7/10 |
+| Phi-4-mini, 16-bit KV cache on the NPU (v2, tried) | 7/10 | 10.0 tok/s | 7/10 |
+
+The quantized model keeps math, code, JSON output, summaries and decisions; it loses two trick reasoning
+questions and sometimes over-assigns action items. That is why every item carries its source quote and the
+app asks the user before saving anything.
+
+## 6. Engineering we had to invent
+
+- **Windows on ARM did not run ExecuTorch's Qualcomm runners out of the box.** Fixed a heap-corruption
+  crash (aligned free), registered the NPU backend in the runner's own registry, and patched Whisper's
+  export for non-tiny models. Patches are in `patches/`.
+- **A keep-loaded NPU server.** The stock runner loads the 5 GB model for every single request. We added a
+  `--server` mode that loads once and answers requests over stdin, with output **byte-identical** to the
+  stock runner: **7.3 s → 1.4 s** per short request.
+- **Fast prompt reading (hybrid mode), in progress.** Phi currently reads prompts one token per NPU step
+  (~10 tokens/s), which is ~80 % of the time per meeting. Hybrid mode adds a graph that reads 128 tokens
+  per step. Its export needed more than 32 GB RAM + 64 GB page file, so we **re-ordered the exporter to
+  never hold three copies of the model at once** (same quantization, two copies at peak).
+- **A crash in the audio library.** Recording crashed the app at random: the `soundcard` library reserves
+  16 bytes for a Windows structure that is 24 bytes on 64-bit, corrupting memory. Found by reproducing it
+  outside the app, fixed in our recorder.
+- **Small-model output, handled.** Phi sometimes answers with a bare list instead of the requested object;
+  the parser now accepts it (this alone had been dropping every feature from the notes).
+- **No surprise windows.** Runner processes start without console windows, so live transcription no longer
+  flashes a terminal every 30 seconds.
+
+## 7. Privacy and trust, by design
+
+- Everything (audio, transcripts, notes, the project map, the search index) lives in one local folder.
+- The AI proposes; **the user approves**. Every decision and feature carries a quote from the transcript,
+  and quotes that cannot be found in it are flagged.
+- Saves are transactional: a failed save leaves the project exactly as it was.
+- Full transcripts are kept with each saved meeting for reference (one switch to turn that off).
+
+## 8. Design
+
+- Built on Microsoft's **Fluent 2** design language: Segoe UI Variable, Fluent brand blue, 4/8 px radii,
+  layered soft shadows, line icons, tinted Windows 11 title bar, own taskbar icon.
+- A hand-drawn **doodle wallpaper** (SVG) sits faintly behind the white panels.
+- The recorder capsule's sound wave is painted at 60 fps from the live microphone level.
+- Fits the laptop's 1280×752 work area (2560×1600 at 200 % scaling); an automatic check renders every
+  page at 3 window sizes and fails on any clipped or overlapping text.
+
+## 9. Pending numbers (being measured now)
+
+| What | Status |
+|---|---|
+| Hybrid Phi: prompt-reading speed (tokens/s) | *pending: export running* |
+| Hybrid Phi: time to notes for a 2,000-character meeting | *pending* (today: 398 s in 5 requests; target: under a minute) |
+| Hybrid Phi: accuracy on the 10-prompt suite | *pending* (must stay at v1's 7/10) |
+| Whisper + Phi on the NPU at the same time (live notes while recording) | *pending* |
+
+## 10. Talk track (60 seconds)
+
+> "Every meeting ends with decisions, and most of them are forgotten by Friday. Cloud assistants remember
+> them for you, by sending every word to a server. We wanted the opposite.
+> This is MeetingGraph. It runs on the neural processor inside this laptop. [Record.] While I talk, it is
+> transcribing, six times faster than I can speak. [Stop.] It has already written the notes, and every
+> decision points back to the sentence it came from. I approve, and the project map updates: what changed,
+> what depends on what, and why.
+> A 3.8-billion-parameter model, on the NPU, using about 9 % of the CPU.
+> And the Wi-Fi has been off the whole time."
+
+---
+
+### Changelog of numbers
+
+- 2026-10-17: Phi-4-mini W8A16 on NPU: 12.2 tok/s, NPU 100 %, CPU ~9 %. Whisper-small WER 10.1 %, tiny 17.1 %.
+  DeepLabV3 6.76 ms. Qwen3-0.6B 47.9 tok/s.
+- 2026-10-18: v1 vs v2 vs bf16: 7/10, 7/10, 10/10; v2 10.0 tok/s (kept v1). Live ASR 5.8× real time.
+  Keep-loaded server 7.3 s → 1.4 s. Meeting notes before hybrid: 2,051 chars in 398 s (5 requests).
+  47 tests passing.

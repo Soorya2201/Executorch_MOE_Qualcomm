@@ -5,8 +5,9 @@ import html
 import re
 import traceback
 
-from PySide6.QtCore import QObject, QRunnable, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPixmap
+from PySide6.QtCore import QObject, QRect, QRunnable, QSize, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QFontMetrics, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import QListView, QListWidget, QStyledItemDelegate
 
 STAGE_TEXT = {
     "recording": "Recording", "recorded": "Recorded", "transcribing": "Transcribing",
@@ -14,10 +15,10 @@ STAGE_TEXT = {
     "ready": "Ready for review", "saving": "Saving", "failed": "Failed",
     "cleanup_failed": "Saved — cleanup failed",
 }
-STAGE_COLOR = {"ready": "#2e7d32", "failed": "#c62828", "cleanup_failed": "#c62828",
-               "transcribing": "#1565c0", "summarizing": "#1565c0", "saving": "#1565c0", "recording": "#ad1457"}
-STATUS_COLOR = {"proposed": "#9e9e9e", "active": "#1e88e5", "blocked": "#e53935", "done": "#43a047",
-                "archived": "#bdbdbd"}
+STAGE_COLOR = {"ready": "#107c10", "failed": "#c50f1f", "cleanup_failed": "#c50f1f",
+               "transcribing": "#0f6cbd", "summarizing": "#0f6cbd", "saving": "#0f6cbd", "recording": "#c239b3"}
+STATUS_COLOR = {"proposed": "#9e9e9e", "active": "#0f6cbd", "blocked": "#c50f1f", "done": "#107c10",
+                "archived": "#d1d1d1"}
 
 
 class _Signals(QObject):
@@ -84,3 +85,33 @@ def md_with_links(body: str, kind_of) -> str:
 
 def esc(s: str) -> str:
     return html.escape(s or "")
+
+
+class _WrapDelegate(QStyledItemDelegate):
+    """Item height for wrapped text that includes the stylesheet's item padding and margins (theme.py:
+    QListWidget::item padding 9px 10px, margin 1px 2px). Qt's own size hint ignores them, which cut off
+    the last line of multi-line items."""
+    PAD_W, PAD_H = 2 * 10 + 2 * 2 + 8, 2 * 9 + 2 * 1 + 4
+    ICON_GAP = 8
+
+    def sizeHint(self, option, index):
+        view = self.parent()
+        width = view.viewport().width()
+        text_w = width - self.PAD_W
+        if index.data(Qt.DecorationRole) is not None:
+            text_w -= max(16, view.iconSize().width()) + self.ICON_GAP
+        r = QFontMetrics(option.font).boundingRect(QRect(0, 0, max(40, text_w), 100000), Qt.TextWordWrap,
+                                                    str(index.data(Qt.DisplayRole) or ""))
+        return QSize(max(40, width - 6), r.height() + self.PAD_H)
+
+
+def wrapping_list() -> QListWidget:
+    """A list whose items wrap to the panel width (never cut off at the right edge, no sideways scrolling)
+    and re-measure their height whenever the panel is resized."""
+    lst = QListWidget()
+    lst.setItemDelegate(_WrapDelegate(lst))
+    lst.setWordWrap(True)
+    lst.setTextElideMode(Qt.ElideNone)
+    lst.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    lst.setResizeMode(QListView.Adjust)
+    return lst

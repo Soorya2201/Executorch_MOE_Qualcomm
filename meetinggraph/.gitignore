@@ -1,6 +1,8 @@
-.venv/
+/.venv/
 __pycache__/
 *.pyc
 .pytest_cache/
-workspace/
+/workspace/
 *.wav
+# your own recorded meetings (private) - never commit
+tests/fixtures/rec_*.txt

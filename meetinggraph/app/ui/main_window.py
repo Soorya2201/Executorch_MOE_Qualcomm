@@ -1,27 +1,30 @@
-"""Main window: app bar (To review / Meetings / Features / Map), then projects | page | Ask.
+"""Main window: app bar (Review / Meetings / Features / Map, Ask toggle), then projects | page | Ask.
 
-A banner always says what to do next.
+Fluent 2 look: line icons, white panels with soft shadows floating over a faint doodle wallpaper (art.py).
+Sized to the screen: opens maximised and fits a 1280x752 work area (2560x1600 at 200 % scaling).
 """
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QThreadPool, QTimer, QUrl
-from PySide6.QtGui import QAction, QDesktopServices
+from PySide6.QtCore import QRect, QSize, Qt, QThreadPool, QTimer, QUrl
+from PySide6.QtGui import QAction, QFontMetrics, QDesktopServices, QGuiApplication
 from PySide6.QtWidgets import (QButtonGroup, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
-                               QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton, QSplitter,
-                               QStatusBar, QTabWidget, QTextBrowser, QToolButton, QVBoxLayout,
+                               QListView, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton, QSplitter,
+                               QStatusBar, QStyledItemDelegate, QTabWidget, QTextBrowser, QToolButton, QVBoxLayout,
                                QWidget)
 
 from ..pipeline.query import answer
 from ..workspace.graph import build_graph
-from .add_meeting import AddMeetingDialog
-from .common import STAGE_COLOR, STAGE_TEXT, STATUS_COLOR, Job, dot_icon, esc
-from . import theme
+from .add_meeting import AddMeetingDialog, RecordSetupDialog
+from .common import STAGE_COLOR, STAGE_TEXT, STATUS_COLOR, Job, dot_icon, esc, wrapping_list
+from . import art, theme
 from .graph_view import GraphView
 from .pages import feature_html, meeting_html
 from .review import ReviewPanel
 
 BUSY = ("recording", "recorded", "transcribing", "summarizing", "saving")
 TAB_REVIEW, TAB_MEETINGS, TAB_FEATURES, TAB_MAP = range(4)
+NAV = ((TAB_REVIEW, "Review", "review"), (TAB_MEETINGS, "Meetings", "meetings"),
+       (TAB_FEATURES, "Features", "features"), (TAB_MAP, "Map", "map"))
 
 
 class MainWindow(QMainWindow):
@@ -34,10 +37,12 @@ class MainWindow(QMainWindow):
         self.model_pool.setMaxThreadCount(1)
         self.project_id: str | None = None
         self.busy: set[str] = set()
-        self._banner_action = None
         self.setWindowTitle("MeetingGraph")
-        self.resize(1480, 920)
-        self.setMinimumSize(1100, 700)
+        self.setWindowIcon(art.logo_icon())
+        # Never larger than the screen: this laptop's work area is 1280x752 (2560x1600 at 200 %).
+        avail = QGuiApplication.primaryScreen().availableGeometry()
+        self.setMinimumSize(min(960, avail.width()), min(600, avail.height()))
+        self.resize(min(1480, avail.width()), min(920, avail.height()))
 
         central = QWidget()
         outer = QVBoxLayout(central)
@@ -48,24 +53,26 @@ class MainWindow(QMainWindow):
         # app bar: brand · navigation · model status · more
         bar = QFrame()
         bar.setObjectName("appbar")
-        bar.setFixedHeight(60)
+        bar.setFixedHeight(52)
         al = QHBoxLayout(bar)
-        al.setContentsMargins(20, 0, 16, 0)
-        al.setSpacing(6)
+        al.setContentsMargins(16, 0, 12, 0)
+        al.setSpacing(4)
         logo = QLabel()
-        logo.setPixmap(dot_icon(theme.ACCENT, 28).pixmap(22, 22))
+        logo.setPixmap(art.logo_pixmap(26))
         al.addWidget(logo)
+        al.addSpacing(6)
         brand = QLabel("MeetingGraph")
         brand.setObjectName("brand")
         al.addWidget(brand)
-        al.addSpacing(28)
+        al.addSpacing(24)
         self.nav_group = QButtonGroup(self)
         self.nav_group.setExclusive(True)
         self.nav: dict[int, QPushButton] = {}
-        for idx, text in ((TAB_REVIEW, "To review"), (TAB_MEETINGS, "Meetings"), (TAB_FEATURES, "Features"),
-                          (TAB_MAP, "Map")):
+        for idx, text, ic in NAV:
             b = QPushButton(text)
             b.setObjectName("nav")
+            b.setIcon(art.icon(ic))
+            b.setIconSize(QSize(18, 18))
             b.setCheckable(True)
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(lambda _=False, i=idx: self.go(i))
@@ -73,13 +80,21 @@ class MainWindow(QMainWindow):
             self.nav[idx] = b
             al.addWidget(b)
         al.addStretch(1)
-        self.chip_llm = self._chip(f"AI  ·  {ctx.llm.label}", bool(getattr(ctx, "llm_problem", "")))
-        self.chip_asr = self._chip(f"Speech  ·  {ctx.asr.label}", False)
-        for chip in (self.chip_llm, self.chip_asr, self._chip("On this laptop only", False, good=True)):
-            al.addWidget(chip, 0, Qt.AlignVCenter)
-        al.addSpacing(6)
+        self.b_ask_toggle = QToolButton()
+        self.b_ask_toggle.setObjectName("appTool")
+        self.b_ask_toggle.setText("Ask")
+        self.b_ask_toggle.setIcon(art.icon("ask"))
+        self.b_ask_toggle.setIconSize(QSize(18, 18))
+        self.b_ask_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.b_ask_toggle.setCheckable(True)
+        self.b_ask_toggle.setChecked(True)
+        self.b_ask_toggle.setCursor(Qt.PointingHandCursor)
+        self.b_ask_toggle.setToolTip("Show or hide the Ask panel")
+        self.b_ask_toggle.toggled.connect(lambda _on: self._sync_nav(self.tabs.currentIndex()))
+        al.addWidget(self.b_ask_toggle)
         more = QToolButton()
-        more.setText("•••")
+        more.setIcon(art.icon("more"))
+        more.setIconSize(QSize(18, 18))
         more.setObjectName("more")
         more.setPopupMode(QToolButton.InstantPopup)
         more.setToolTip("More")
@@ -95,25 +110,11 @@ class MainWindow(QMainWindow):
         al.addWidget(more)
         outer.addWidget(bar)
 
-        work = QWidget()
+        work = self.backdrop = art.Backdrop()
         cl = QVBoxLayout(work)
-        cl.setContentsMargins(16, 14, 16, 8)
+        cl.setContentsMargins(14, 14, 14, 10)
         cl.setSpacing(12)
         outer.addWidget(work, 1)
-
-        # banner: what to do next
-        self.banner = QFrame()
-        self.banner.setObjectName("banner")
-        bl = QHBoxLayout(self.banner)
-        bl.setContentsMargins(18, 12, 12, 12)
-        self.banner_text = QLabel()
-        self.banner_text.setWordWrap(True)
-        self.banner_text.setTextFormat(Qt.RichText)
-        self.banner_btn = QPushButton("Show me")
-        self.banner_btn.setObjectName("primary")
-        bl.addWidget(self.banner_text, 1)
-        bl.addWidget(self.banner_btn)
-        cl.addWidget(self.banner)
 
         root = QSplitter()
         root.setChildrenCollapsible(False)
@@ -122,25 +123,31 @@ class MainWindow(QMainWindow):
         # left: projects + main actions
         left = QFrame()
         left.setObjectName("sidebar")
-        left.setMinimumWidth(220)
+        left.setMinimumWidth(200)
         ll = QVBoxLayout(left)
         ll.setContentsMargins(14, 14, 14, 14)
         ll.setSpacing(8)
-        self.b_add = QPushButton("＋  Add a meeting")
+        self.b_add = QPushButton("Add a transcript")
         self.b_add.setObjectName("primary")
-        self.b_add.setMinimumHeight(40)
+        self.b_add.setIcon(art.icon("add", "#ffffff", "#ffffff"))
+        self.b_add.setMinimumHeight(36)
         ll.addWidget(self.b_add)
-        self.b_record = QPushButton("●  Record a live meeting")
+        self.b_record = QPushButton("Record")
+        self.b_record.setObjectName("record")
+        self.b_record.setIcon(art.icon("record", "#ffffff", "#ffffff"))
+        self.b_record.setMinimumHeight(36)
+        self.b_record.setToolTip("Record a meeting: your microphone + the computer's sound")
         ll.addWidget(self.b_record)
         ll.addSpacing(10)
         lbl = QLabel("PROJECTS")
         lbl.setObjectName("eyebrow")
         ll.addWidget(lbl)
-        self.projects = QListWidget()
+        self.projects = wrapping_list()
         self.projects.setObjectName("bare")
         ll.addWidget(self.projects, 1)
-        self.b_new = QPushButton("＋  New project")
+        self.b_new = QPushButton("New project")
         self.b_new.setObjectName("ghost")
+        self.b_new.setIcon(art.icon("add", theme.TEXT_2, theme.TEXT_2))
         ll.addWidget(self.b_new)
         root.addWidget(left)
 
@@ -155,22 +162,20 @@ class MainWindow(QMainWindow):
         rl.addWidget(rsplit)
         sl = QFrame()
         sl.setObjectName("panel")
-        sl.setMinimumWidth(220)
+        sl.setMinimumWidth(200)
         sll = QVBoxLayout(sl)
         sll.setContentsMargins(12, 14, 12, 12)
         t = QLabel("WAITING FOR YOU")
         t.setObjectName("eyebrow")
         sll.addWidget(t)
-        self.sessions = QListWidget()
+        self.sessions = wrapping_list()
         self.sessions.setObjectName("bare")
-        self.sessions.setWordWrap(True)
-        self.sessions.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         sll.addWidget(self.sessions, 1)
         self.review = ReviewPanel(ctx)
         rsplit.addWidget(sl)
         rsplit.addWidget(self.review)
-        rsplit.setSizes([260, 900])
-        self.tabs.addTab(rev, "To review")
+        rsplit.setSizes([250, 900])
+        self.tabs.addTab(rev, "Review")
 
         def list_and_view(lst, view, extra=None):
             page = QWidget()
@@ -181,7 +186,8 @@ class MainWindow(QMainWindow):
             pl.addWidget(split)
             lcard = QFrame()
             lcard.setObjectName("panel")
-            lcard.setMinimumWidth(220)
+            lcard.setMinimumWidth(200)
+            self.backdrop.add_panels(lcard, view)
             lcl = QVBoxLayout(lcard)
             lcl.setContentsMargins(12, 12, 12, 12)
             if extra is not None:
@@ -190,10 +196,10 @@ class MainWindow(QMainWindow):
             lcl.addWidget(lst, 1)
             split.addWidget(lcard)
             split.addWidget(view)
-            split.setSizes([260, 800])
+            split.setSizes([250, 800])
             return page
 
-        self.meetings = QListWidget()
+        self.meetings = wrapping_list()
         self.meeting_view = QTextBrowser()
         self.meeting_view.setOpenLinks(False)
         self.tabs.addTab(list_and_view(self.meetings, self.meeting_view), "Meetings")
@@ -201,7 +207,7 @@ class MainWindow(QMainWindow):
         self.feature_filter = QLineEdit()
         self.feature_filter.setPlaceholderText("Search features…")
         self.feature_filter.setClearButtonEnabled(True)
-        self.features = QListWidget()
+        self.features = wrapping_list()
         self.feature_view = QTextBrowser()
         self.feature_view.setOpenLinks(False)
         self.tabs.addTab(list_and_view(self.features, self.feature_view, self.feature_filter), "Features")
@@ -211,14 +217,15 @@ class MainWindow(QMainWindow):
         root.addWidget(self.tabs)
 
         # right: ask
-        right = QFrame()
+        right = self.ask_panel = QFrame()
         right.setObjectName("panel")
-        right.setMinimumWidth(280)
+        right.setMinimumWidth(260)
         rr = QVBoxLayout(right)
         rr.setContentsMargins(16, 16, 16, 14)
         rr.setSpacing(8)
         self.chat_title = QLabel("Ask a question")
         self.chat_title.setObjectName("h2")
+        self.chat_title.setWordWrap(True)
         self.pending = QLabel("")
         self.pending.setWordWrap(True)
         self.pending.setObjectName("warnText")
@@ -241,11 +248,17 @@ class MainWindow(QMainWindow):
         note.setObjectName("small")
         rr.addWidget(note)
         root.addWidget(right)
-        root.setSizes([240, 900, 330])
+        root.setSizes([230, 900, 300])
+        self.backdrop.add_panels(left, sl, right, *self.graph.panels)
 
         sb = QStatusBar()
         sb.setSizeGripEnabled(False)
         self.setStatusBar(sb)
+        if getattr(ctx, "llm_problem", ""):
+            warn = QLabel(f"AI model not available, using simple rules: {ctx.llm_problem}")
+            warn.setObjectName("warnText")
+            warn.setToolTip(ctx.llm_problem)
+            sb.addWidget(warn, 1)
         self.tabs.currentChanged.connect(self._sync_nav)
         self.go(TAB_REVIEW)
 
@@ -262,7 +275,6 @@ class MainWindow(QMainWindow):
         self.b_add.clicked.connect(self.add_meeting)
         self.b_new.clicked.connect(self.new_project)
         self.b_record.clicked.connect(self.open_recorder)
-        self.banner_btn.clicked.connect(lambda: self._banner_action and self._banner_action())
         b_ask.clicked.connect(self.ask_question)
         self.ask.returnPressed.connect(self.ask_question)
 
@@ -272,30 +284,15 @@ class MainWindow(QMainWindow):
         self.refresh_all()
 
     # ---------- navigation ----------
-    def _chip(self, text: str, warn: bool, good: bool = False) -> QFrame:
-        fr = QFrame()
-        fr.setObjectName("chipGood" if good else "chipWarn" if warn else "chip")
-        fr.setFixedHeight(28)
-        lay = QHBoxLayout(fr)
-        lay.setContentsMargins(10, 4, 12, 4)
-        lay.setSpacing(6)
-        dot = QLabel()
-        dot.setPixmap(dot_icon(theme.GOOD if good else theme.WARN if warn else theme.ACCENT, 12).pixmap(8, 8))
-        lb = QLabel(text)
-        lb.setObjectName("chipGoodText" if good else "chipText")
-        lay.addWidget(dot)
-        lay.addWidget(lb)
-        if warn:
-            fr.setToolTip(f"AI model not available: {getattr(self.ctx, 'llm_problem', '')}")
-        return fr
-
     def go(self, idx: int):
         self.tabs.setCurrentIndex(idx)
-        self.nav[idx].setChecked(True)
+        self._sync_nav(idx)
 
     def _sync_nav(self, idx: int):
         if idx in self.nav:
             self.nav[idx].setChecked(True)
+        self.ask_panel.setVisible(idx != TAB_REVIEW and self.b_ask_toggle.isChecked())
+        self.b_ask_toggle.setEnabled(idx != TAB_REVIEW)
 
     def bring_to_front(self):
         """Restore from minimised/hidden and focus (tray, second launch, notifications)."""
@@ -305,49 +302,6 @@ class MainWindow(QMainWindow):
             self.show()
         self.raise_()
         self.activateWindow()
-
-    # ---------- banner ----------
-    def update_banner(self, sessions=None):
-        sessions = sessions if sessions is not None else self.ctx.sm.list()
-        projects = self.ctx.store.list_projects()
-        warn = False
-        llm_problem = getattr(self.ctx, "llm_problem", "")
-        busy = [s for s in sessions if s.get("stage") in BUSY]
-        ready = [s for s in sessions if s.get("stage") == "ready"]
-        bad = [s for s in sessions if s.get("stage") in ("failed", "cleanup_failed", "transcribed")]
-        if ready:
-            s = ready[0]
-            text = (f"<b>“{esc(s['title'])}” is ready for you.</b> Check the suggested changes, answer any yellow "
-                    "questions, then click <b>Save to project</b>.")
-            btn, act = "Review it", (lambda sid=s["id"]: self.select_session(sid))
-        elif bad:
-            s = bad[0]
-            warn = True
-            text = f"<b>“{esc(s['title'])}” needs your attention.</b> Open it to see what to do."
-            btn, act = "Open it", (lambda sid=s["id"]: self.select_session(sid))
-        elif busy:
-            s = busy[0]
-            text = (f"<b>Working on “{esc(s['title'])}”…</b> {STAGE_TEXT.get(s['stage'], '')}. "
-                    "It will show up here when it's ready to review.")
-            btn, act = "See progress", (lambda sid=s["id"]: self.select_session(sid))
-        elif not projects:
-            text = ("<b>Start here:</b> click <b>＋ Add a meeting</b>. Create a project, then paste a conversation or "
-                    "open a transcript file. To try it, use <i>tests\\fixtures\\atlas_01_kickoff.txt</i>.")
-            btn, act = "Add a meeting", self.add_meeting
-        else:
-            name = next((p["name"] for p in projects if p["id"] == self.project_id), projects[0]["name"])
-            text = (f"<b>All caught up.</b> Add the next meeting for “{esc(name)}”, look through Meetings, "
-                    "Features and the Map, or ask a question on the right.")
-            btn, act = "Add a meeting", self.add_meeting
-        if llm_problem:
-            text += f"<br><span style='color:{theme.WARN}'>AI model not available: {esc(llm_problem)} " \
-                    "Using simple rules until it is fixed.</span>"
-        self.banner.setObjectName("bannerWarn" if warn else "banner")
-        self.banner.style().unpolish(self.banner)
-        self.banner.style().polish(self.banner)
-        self.banner_text.setText(text)
-        self.banner_btn.setText(btn)
-        self._banner_action = act
 
     # ---------- refresh ----------
     def refresh_all(self):
@@ -394,11 +348,11 @@ class MainWindow(QMainWindow):
             if s["id"] == cur:
                 self.sessions.setCurrentItem(it)
         if not sessions:
-            it = QListWidgetItem("Nothing to review.\nUse “＋ Add a meeting”.")
+            it = QListWidgetItem("Nothing to review.\nUse “● Record” or\n“＋ Add a transcript”.")
             it.setFlags(Qt.NoItemFlags)
             self.sessions.addItem(it)
         self.sessions.blockSignals(False)
-        self.nav[TAB_REVIEW].setText(f"To review  ·  {ready}" if ready else "To review")
+        self.nav[TAB_REVIEW].setText(f"Review  ·  {ready}" if ready else "Review")
         if cur and not any(s["id"] == cur for s in sessions):
             self.review.clear()
         elif changed_current:
@@ -406,7 +360,6 @@ class MainWindow(QMainWindow):
         n = sum(1 for s in sessions if s.get("project_id") == self.project_id)
         self.pending.setText(f"{n} meeting(s) for this project are not saved yet, so answers don't include them."
                              if n else "")
-        self.update_banner(sessions)
 
     def _on_project(self, cur, _prev):
         if cur is None:
@@ -440,7 +393,7 @@ class MainWindow(QMainWindow):
             self.meetings.addItem(it)
         if not ms:
             self.meeting_view.setHtml("<p style='color:#667085'>No saved meetings yet. Add one and save it from "
-                                      "“To review”.</p>")
+                                      "“Review”.</p>")
 
     def refresh_features(self, *_):
         self.features.clear()
@@ -473,8 +426,9 @@ class MainWindow(QMainWindow):
             return
         m = self.ctx.store.meeting(self.project_id, cur.data(Qt.UserRole))
         if m:
+            saved = self.ctx.sm.transcript_path(self.project_id, m["id"]).exists()
             self.meeting_view.setHtml(meeting_html(m, self.ctx.store.features(self.project_id),
-                                                   self.ctx.store.meetings(self.project_id)))
+                                                   self.ctx.store.meetings(self.project_id), saved))
 
     def _on_feature(self, cur, _prev):
         if not cur or not self.project_id or not cur.data(Qt.UserRole):
@@ -488,7 +442,10 @@ class MainWindow(QMainWindow):
         s = url.toString()
         if s.startswith("open:"):
             _, kind, iid = s.split(":", 2)
-            self.open_item(kind, iid)
+            if kind == "transcript":
+                self.show_transcript(iid)
+            else:
+                self.open_item(kind, iid)
 
     def open_item(self, kind: str, iid: str):
         lst, tab = (self.meetings, TAB_MEETINGS) if kind == "meeting" else (self.features, TAB_FEATURES)
@@ -499,6 +456,18 @@ class MainWindow(QMainWindow):
                 lst.setCurrentRow(i)
                 self.go(tab)
                 return
+
+    def show_transcript(self, meeting_id: str):
+        if not self.project_id:
+            return
+        p = self.ctx.sm.transcript_path(self.project_id, meeting_id)
+        m = self.ctx.store.meeting(self.project_id, meeting_id) or {}
+        tb = QTextBrowser()
+        tb.setPlainText(p.read_text(encoding="utf-8") if p.exists() else "This transcript was not kept.")
+        tb.resize(820, 640)
+        tb.setWindowTitle(f"Transcript — {m.get('title', meeting_id)}")
+        tb.show()
+        self._transcript_win = tb
 
     def show_log(self):
         if not self.project_id:
@@ -532,9 +501,6 @@ class MainWindow(QMainWindow):
     def handle_new_meeting(self, r: dict):
         self.refresh_projects(select=r["project_id"])
         pname = (self.ctx.store.project(r["project_id"]) or {}).get("name", "")
-        if r["mode"] == "record":
-            self.open_recorder(r["project_id"], r["title"])
-            return
         if r["mode"] in ("paste", "text_file"):
             s = self.ctx.sm.import_text(r["text"], r["project_id"], pname, r["title"])
             self.select_session(s["id"])
@@ -545,17 +511,51 @@ class MainWindow(QMainWindow):
             self.process(s["id"])
 
     def open_recorder(self, project_id: str | None = None, title: str | None = None):
-        c = self.ctx.control
-        if not c:
+        """● Record: pick project + title, minimize this window, show the floating recorder."""
+        pill = self.ctx.control
+        if pill is None:
             return
-        if not c.recording:
-            c.refresh()
-            if project_id or self.project_id:
-                c.select_project(project_id or self.project_id)
-            if title:
-                c.title.setText(title)
-        c.show()
-        c.raise_()
+        if pill.isVisible():
+            pill.raise_()
+            return
+        if not getattr(self.ctx.asr, "available", False):
+            box = QMessageBox(self)
+            box.setWindowTitle("Speech recognition is off")
+            box.setText("The recording can be made, but it can't be turned into a transcript until speech "
+                        "recognition is installed.")
+            box.setInformativeText("In the terminal run:  pip install -r requirements-asr.txt\n"
+                                   "then restart the app. Record anyway (the audio is kept for later)?")
+            go = box.addButton("Record anyway", QMessageBox.AcceptRole)
+            box.addButton("Cancel", QMessageBox.RejectRole)
+            box.exec()
+            if box.clickedButton() is not go:
+                return
+        d = RecordSetupDialog(self.ctx, self, project_id or self.project_id)
+        if title:
+            d.title.setText(title)
+        if not d.exec():
+            return
+        r = d.result_data
+        self.refresh_projects(select=r["project_id"])
+        pname = (self.ctx.store.project(r["project_id"]) or {}).get("name", "")
+        self.showMinimized()
+        pill.begin(r["project_id"], pname, r["title"])
+
+    def on_recording_finished(self, sid: str, keep: bool):
+        """Called when the recorder pill closes (■ stop or ✕)."""
+        self.showMaximized()
+        self.raise_()
+        self.activateWindow()
+        if keep and sid:
+            self.select_session(sid)
+            self.process(sid)
+            if sid in self.ctx.sm.live:
+                self.statusBar().showMessage("Recording saved. Finishing the last seconds of the transcript and "
+                                             "the notes…", 8000)
+            else:
+                self.statusBar().showMessage("Recording saved. Turning it into a transcript on this laptop…", 8000)
+        else:
+            self.statusBar().showMessage("Recording discarded.", 5000)
 
     # ---------- sessions ----------
     def _on_session(self, cur, _prev):
@@ -583,7 +583,12 @@ class MainWindow(QMainWindow):
     def process(self, sid: str):
         """After Stop or audio import: transcribe, then summarize, in the background."""
         def pipeline(sid=sid):
-            s = self.ctx.sm.load(sid)
+            sm = self.ctx.sm
+            if sid in sm.live:                   # transcript was written while recording: finish it off
+                return sm.finish_live(sid)
+            s = sm.load(sid)
+            if s.get("live_transcript_ok") and s["stage"] == "failed" and sm.transcript(sid).strip():
+                return sm.extract(sid)           # only the notes failed; the transcript is complete
             if s.get("audio") and s["stage"] in ("recorded", "failed"):
                 s = self.ctx.sm.transcribe(sid)
                 if s["stage"] != "transcribed":
@@ -606,6 +611,8 @@ class MainWindow(QMainWindow):
             self.refresh_sessions()
             if self.review.sid == sid:
                 self._load_review(sid)
+            if isinstance(res, dict) and res.get("saved_transcript"):
+                self.statusBar().showMessage(f"Transcript saved to {res['saved_transcript']}", 15000)
             if isinstance(res, dict) and res.get("stage") == "ready":
                 self.notify("Meeting ready for review", f"{res.get('title')}: check the changes and save.")
             elif isinstance(res, dict) and res.get("stage") == "failed":
@@ -666,13 +673,15 @@ class MainWindow(QMainWindow):
         self.review.clear()
         self.refresh_projects(select=res["project_id"])
         if not res.get("cleanup_ok"):
-            QMessageBox.warning(self, "Saved, but…", "The meeting was saved, but the temporary transcript could "
-                                "not be deleted. Open it under “To review” and click “Retry deleting temporary "
+            QMessageBox.warning(self, "Saved, but…", "The meeting was saved, but its temporary files could not "
+                                "be cleaned up. Open it under “Review” and click “Retry deleting temporary "
                                 "files”.\n\n" + res.get("cleanup_error", ""))
-        self.notify("Saved", "Project updated. The temporary transcript was deleted.")
+        kept = bool(self.ctx.cfg["audio"].get("keep_transcript_after_commit", True))
+        what = "The full transcript is kept with the meeting." if kept else "The temporary transcript was deleted."
+        self.notify("Saved", f"Project updated. {what}")
         box = QMessageBox(self)
         box.setWindowTitle("Saved")
-        box.setText("Saved to the project. The temporary transcript was deleted.")
+        box.setText(f"Saved to the project. {what}")
         box.setInformativeText("What would you like to see next?")
         b_map = box.addButton("See the Map", QMessageBox.AcceptRole)
         b_feat = box.addButton("See Features", QMessageBox.AcceptRole)

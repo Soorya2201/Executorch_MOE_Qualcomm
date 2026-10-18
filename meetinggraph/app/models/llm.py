@@ -7,13 +7,21 @@
 """
 from __future__ import annotations
 
+import atexit
 import json
+import queue
 import subprocess
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+
+# The app runs under pythonw (no console). Without this flag Windows opens a terminal window for every
+# runner .exe it starts (one per live-transcription batch while recording).
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 class LLMError(RuntimeError):
@@ -132,6 +140,115 @@ _REPLY_START = ("<|assistant|>", "<|im_start|>assistant", "<|start_header_id|>as
 _REPLY_END = ("<|end|>", "<|im_end|>", "<|endoftext|>", "<|eot_id|>", "<|end_of_text|>")
 
 
+class _RunnerServer:
+    """One qnn_llama_runner --server process: the .pte is loaded once and reused for every request.
+
+    Protocol (one line each): request ``<prompt_file>\\t<seq_len>\\t<output_file>``; reply
+    ``OK\\t<prompt_tokens>\\t<generated>\\t<prefill_ms>\\t<total_ms>`` or ``ERR\\t<message>``. The runner also
+    prints a stats line (PyTorchObserver) that is skipped. Unloads itself after ``idle_s`` without requests.
+    """
+
+    def __init__(self, args: list[str], load_timeout: float, idle_s: float):
+        self.args, self.load_timeout, self.idle_s = args, load_timeout, idle_s
+        self.proc: subprocess.Popen | None = None
+        self.lines: queue.Queue = queue.Queue()
+        self.lock = threading.Lock()
+        self.workdir = Path(tempfile.mkdtemp(prefix="mg_llm_srv_"))
+        self.last_used = 0.0
+        self.last_stats = ""
+        threading.Thread(target=self._idle_watch, daemon=True, name="llm-idle").start()
+        atexit.register(self.stop)
+
+    def _reader(self, proc):
+        for line in proc.stdout:
+            self.lines.put(line.rstrip("\r\n"))
+        self.lines.put(None)  # the process exited
+
+    def _next_line(self, timeout: float) -> str:
+        try:
+            line = self.lines.get(timeout=timeout)
+        except queue.Empty:
+            raise LLMError(f"NPU runner did not answer within {int(timeout)} s") from None
+        if line is None:
+            raise LLMError("NPU runner exited")
+        return line
+
+    def _start(self):
+        self.stop()
+        self.lines = queue.Queue()
+        self.proc = subprocess.Popen(self.args, cwd=self.workdir, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
+                                     creationflags=NO_WINDOW)
+        threading.Thread(target=self._reader, args=(self.proc,), daemon=True, name="llm-out").start()
+        deadline = time.monotonic() + self.load_timeout
+        while True:
+            line = self._next_line(max(1.0, deadline - time.monotonic()))
+            if line == "READY":
+                return
+            if line.startswith("ERR"):
+                raise LLMError(f"NPU runner could not load the model: {line[4:]}")
+
+    def stop(self):
+        p, self.proc = self.proc, None
+        if p is None:
+            return
+        try:
+            if p.poll() is None:
+                p.stdin.write("QUIT\n")
+                p.stdin.flush()
+                p.wait(10)
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            p.kill()
+        finally:
+            for f in (p.stdin, p.stdout):   # close pipes of a dead runner quietly (no "invalid argument" on GC)
+                try:
+                    f.close()
+                except (OSError, ValueError):
+                    pass
+
+    def _idle_watch(self):
+        while True:
+            time.sleep(15)
+            if self.proc and self.idle_s > 0 and time.monotonic() - self.last_used > self.idle_s \
+                    and self.lock.acquire(blocking=False):
+                try:
+                    self.stop()
+                finally:
+                    self.lock.release()
+
+    def _once(self, prompt_file: Path, seq_len: int, out_file: Path, timeout: float) -> str:
+        if self.proc is None or self.proc.poll() is not None:
+            self._start()
+        try:
+            self.proc.stdin.write(f"{prompt_file}\t{seq_len}\t{out_file}\n")
+            self.proc.stdin.flush()
+        except (OSError, ValueError) as e:     # the runner died between requests
+            raise LLMError(f"NPU runner exited: {e}") from e
+        while True:
+            line = self._next_line(timeout)
+            if line.startswith("OK"):
+                self.last_stats = line
+                return out_file.read_text(encoding="utf-8", errors="replace")
+            if line.startswith("ERR"):
+                raise LLMError(f"NPU runner: {line[4:]}")
+
+    def generate(self, prompt: str, seq_len: int, timeout: float) -> str:
+        with self.lock:
+            self.last_used = time.monotonic()
+            pf, of = self.workdir / "prompt.txt", self.workdir / "output.txt"
+            pf.write_text(prompt, encoding="utf-8")
+            of.unlink(missing_ok=True)
+            try:
+                return self._once(pf, seq_len, of, timeout)
+            except LLMError:
+                # A crashed, hung or unloaded runner: start a fresh one and try once more.
+                self.stop()
+                of.unlink(missing_ok=True)
+                return self._once(pf, seq_len, of, timeout)
+            finally:
+                self.last_used = time.monotonic()
+
+
 class ExecuTorchRunnerLLM(BaseLLM):
     """Runs an ExecuTorch LLM on the NPU. Two modes:
 
@@ -146,7 +263,8 @@ class ExecuTorchRunnerLLM(BaseLLM):
 
     def __init__(self, command: list[str], cwd: str = "", timeout_s: int = 300,
                  verified_on_npu: bool = False, label: str = "", runner: str = "", model_path: str = "",
-                 tokenizer_path: str = "", decoder_model_version: str = "phi_4_mini", max_seq_len: int = 2048):
+                 tokenizer_path: str = "", decoder_model_version: str = "phi_4_mini", max_seq_len: int = 2048,
+                 eval_mode: int | None = None, server_runner: str = "", keep_loaded_s: float = 300):
         super().__init__(label)
         self.runner = runner
         if runner:
@@ -158,6 +276,17 @@ class ExecuTorchRunnerLLM(BaseLLM):
         self.command = command
         self.model_path, self.tokenizer_path = model_path, tokenizer_path
         self.decoder_model_version, self.max_seq_len = decoder_model_version, max_seq_len
+        # 0 = kv (one graph), 1 = hybrid (fast prompt-reading graph + kv). Default from the .pte name.
+        self.eval_mode = eval_mode if eval_mode is not None else int(Path(model_path).name.startswith("hybrid"))
+        self.server = None
+        if runner and server_runner:
+            if not Path(server_runner).exists():
+                raise LLMError(f"ExecuTorch file not found: {server_runner}")
+            self.server = _RunnerServer(
+                [server_runner, "--server", "--model_path", model_path, "--tokenizer_path", tokenizer_path,
+                 "--decoder_model_version", decoder_model_version, "--eval_mode", str(self.eval_mode),
+                 "--temperature", "0", "--seq_len", str(max_seq_len), "--output_path", "unused.txt"],
+                load_timeout=min(timeout_s, 180), idle_s=keep_loaded_s)
         self.cwd = cwd or None
         self.timeout = timeout_s
         self.verified = verified_on_npu
@@ -181,16 +310,21 @@ class ExecuTorchRunnerLLM(BaseLLM):
             raise LLMError(f"Prompt (~{prompt_tokens} tokens) does not fit the model's {self.max_seq_len}-token "
                            "context. Lower llm.max_transcript_chars_per_chunk in config.yaml.")
         seq_len = prompt_tokens + min(max_tokens, room)
+        if self.server is not None:
+            t0 = time.perf_counter()
+            text = self.server.generate(prompt, seq_len, self.timeout)
+            self.last_seconds = time.perf_counter() - t0
+            return self._reply_only(text)
         with tempfile.TemporaryDirectory(prefix="mg_llm_") as td:
             out = Path(td) / "output.txt"
             args = [self.runner, "--model_path", self.model_path, "--tokenizer_path", self.tokenizer_path,
-                    "--decoder_model_version", self.decoder_model_version, "--eval_mode", "0",
+                    "--decoder_model_version", self.decoder_model_version, "--eval_mode", str(self.eval_mode),
                     "--seq_len", str(seq_len), "--temperature", "0", "--prompt", prompt,
                     "--output_path", str(out), "--performance_output_path", str(Path(td) / "speed.txt")]
             t0 = time.perf_counter()
             try:
                 # cwd=td: the runner writes side files into its working directory.
-                p = subprocess.run(args, cwd=td, capture_output=True, text=True, timeout=self.timeout,
+                p = subprocess.run(args, cwd=td, capture_output=True, text=True, creationflags=NO_WINDOW, timeout=self.timeout,
                                    encoding="utf-8", errors="replace")
             except (OSError, subprocess.TimeoutExpired) as e:
                 raise LLMError(f"NPU runner failed to start or timed out: {e}") from e
@@ -198,6 +332,10 @@ class ExecuTorchRunnerLLM(BaseLLM):
             if p.returncode != 0 or not out.exists():
                 raise LLMError(f"NPU runner exited {p.returncode}: {(p.stderr or p.stdout)[-800:]}")
             text = out.read_text(encoding="utf-8", errors="replace")
+        return self._reply_only(text)
+
+    @staticmethod
+    def _reply_only(text: str) -> str:
         for marker in _REPLY_START:  # keep only the reply, not the echoed chat template
             if marker in text:
                 text = text.rsplit(marker, 1)[1]
@@ -219,7 +357,7 @@ class ExecuTorchRunnerLLM(BaseLLM):
                     for a in self.command]
             t0 = time.perf_counter()
             try:
-                p = subprocess.run(args, cwd=self.cwd, capture_output=True, text=True,
+                p = subprocess.run(args, cwd=self.cwd, capture_output=True, text=True, creationflags=NO_WINDOW,
                                    timeout=self.timeout, encoding="utf-8", errors="replace")
             except (OSError, subprocess.TimeoutExpired) as e:
                 raise LLMError(f"Runner failed to start or timed out: {e}") from e
@@ -247,5 +385,6 @@ def make_llm(cfg: dict) -> BaseLLM:
         return ExecuTorchRunnerLLM(e.get("command") or [], e.get("cwd", ""), e.get("timeout_s", 300),
                                    e.get("verified_on_npu", False), label, e.get("runner", ""),
                                    e.get("model_path", ""), e.get("tokenizer_path", ""),
-                                   e.get("decoder_model_version", "phi_4_mini"), e.get("max_seq_len", 2048))
+                                   e.get("decoder_model_version", "phi_4_mini"), e.get("max_seq_len", 2048),
+                                   e.get("eval_mode"), e.get("server_runner", ""), e.get("keep_loaded_s", 300))
     raise LLMError(f"Unknown llm.backend {b!r}")

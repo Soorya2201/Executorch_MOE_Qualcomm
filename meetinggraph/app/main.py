@@ -16,9 +16,8 @@ from .config import load_config
 from .models.asr import BaseASR, NoASR, make_asr
 from .models.llm import BaseLLM, HeuristicLLM, make_llm
 from .pipeline.session import SessionManager
-from .ui.common import dot_icon
-from .ui.control_window import ControlWindow
-from .ui import theme
+from .ui.recorder_pill import RecorderPill
+from .ui import art, theme
 from .ui.main_window import MainWindow
 from .workspace.paths import Layout
 from .workspace.store import Store
@@ -34,7 +33,7 @@ class Ctx:
     asr: BaseASR
     llm: BaseLLM
     sm: SessionManager
-    control: ControlWindow | None = None
+    control: RecorderPill | None = None
     notes: list[str] = field(default_factory=list)
     llm_problem: str = ""
 
@@ -97,7 +96,9 @@ def _already_running() -> bool:
 
 def main() -> int:
     cfg = load_config(sys.argv[1] if len(sys.argv) > 1 else None)
+    art.set_app_id()                      # before any window: own taskbar icon/grouping
     app = QApplication(sys.argv)
+    app.setWindowIcon(art.logo_icon())
     app.setApplicationName("MeetingGraph")
     app.setQuitOnLastWindowClosed(False)
     if _already_running():
@@ -106,7 +107,7 @@ def main() -> int:
     theme.apply(app)
     ctx = build_ctx(cfg)
 
-    tray = QSystemTrayIcon(dot_icon(theme.ACCENT))
+    tray = QSystemTrayIcon(art.logo_icon())
     tray.setToolTip("MeetingGraph — local only")
 
     def notify(title, msg):
@@ -114,9 +115,8 @@ def main() -> int:
             tray.showMessage(title, msg, QSystemTrayIcon.Information, 6000)
 
     win = MainWindow(ctx, notify)
-    ctx.control = ControlWindow(ctx)
-    ctx.control.open_app.connect(win.bring_to_front)
-    ctx.control.stopped.connect(lambda sid: (win.select_session(sid), win.process(sid)))
+    ctx.control = RecorderPill(ctx)
+    ctx.control.finished.connect(win.on_recording_finished)
     tray.messageClicked.connect(win.bring_to_front)
     tray.activated.connect(lambda reason: win.bring_to_front()
                            if reason in (QSystemTrayIcon.Trigger, QSystemTrayIcon.DoubleClick) else None)
@@ -128,8 +128,7 @@ def main() -> int:
 
     menu = QMenu()
     for text, fn in (("Open MeetingGraph", win.bring_to_front),
-                     ("Meeting control", lambda: (ctx.control.refresh() if not ctx.control.recording else None,
-                                                   ctx.control.show(), ctx.control.raise_())),
+                     ("Record", lambda: (win.bring_to_front(), win.open_recorder())),
                      ("Stop recording", lambda: ctx.control.stop()),
                      ("Quit", lambda: quit_app())):
         a = QAction(text, menu)
@@ -161,7 +160,8 @@ def main() -> int:
         ev.accept()
         app.quit()
     win.closeEvent = on_close
-    win.show()
+    win.showMaximized()                   # fills the work area exactly, whatever the scaling
+    art.tint_title_bar(win)
     if ctx.notes:
         QTimer.singleShot(0, lambda: QMessageBox.information(win, "Recovered after restart", "\n".join(ctx.notes)))
     return app.exec()

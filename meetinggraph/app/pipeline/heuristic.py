@@ -56,7 +56,8 @@ def extract(segments: list[dict], title: str = "Meeting") -> dict:
         key = name.lower()
         if key not in feats:
             feats[key] = {"title": name, "action": action, "description": "", "status": "", "subtasks": [],
-                          "depends_on": [], "impact": "", "uncertainty": "", "evidence": []}
+                          "depends_on": [], "impact": "", "uncertainty": "", "evidence": [],
+                          "key_points": [], "relations": []}
             order.append(key)
         f = feats[key]
         rank = {"change": 0, "add": 1, "archive": 2}
@@ -125,7 +126,10 @@ def extract(segments: list[dict], title: str = "Meeting") -> dict:
             m = R_DEP.match(body)
             if m:
                 f = feat(_clean(m.group(1)), "change")
-                f["depends_on"] += [d for d in _split_list(m.group(2)) if d not in f["depends_on"]]
+                for d in _split_list(m.group(2)):
+                    if d not in f["depends_on"]:
+                        f["depends_on"].append(d)
+                        f["relations"].append({"to": d, "type": "needs", "why": _clean(s)})
                 ev(f, seg, s)
                 continue
             m = R_STATUS.match(body)

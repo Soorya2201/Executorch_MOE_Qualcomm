@@ -8,9 +8,9 @@ from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QComboBox, QDialog, QFor
                                QLabel, QLineEdit, QMenu, QMessageBox, QPlainTextEdit, QPushButton, QRadioButton,
                                QScrollArea, QStackedWidget, QTextBrowser, QVBoxLayout, QWidget)
 
-from ..pipeline.match import _card_from_existing
+from ..pipeline.match import _card_from_existing, sync_relations
 from ..pipeline.transcript import fmt_ts, norm
-from ..workspace.store import STATUSES
+from ..workspace.store import RELATION_LABEL, STATUSES
 from .common import STAGE_TEXT, esc
 from .theme import BAD, GOOD, MUTED
 
@@ -20,6 +20,33 @@ HIDDEN_FLAG_PREFIXES = ("Meeting said", "Possible duplicate", "No existing featu
 
 def _lines(xs) -> list[str]:
     return [x for x in (xs or []) if str(x).strip()]
+
+
+REL_TYPES = ("needs", "part of", "produces", "controls", "uses", "related")
+
+
+def relations_to_text(rels) -> str:
+    return "\n".join(f"{r.get('type', 'related')} | {r.get('to', '')} | {r.get('why', '')}".rstrip(" |")
+                     for r in rels or [] if r.get("to"))
+
+
+def relations_from_text(text: str) -> list[dict]:
+    """Lines like:  needs | Ribosomes | proteins are built on ribosomes"""
+    out = []
+    for ln in text.splitlines():
+        parts = [p.strip() for p in ln.split("|")]
+        if len(parts) < 2 or not parts[1]:
+            continue
+        typ = parts[0].lower() if parts[0].lower() in REL_TYPES else "related"
+        out.append({"to": parts[1], "type": typ, "why": " | ".join(parts[2:]).strip()})
+    return out
+
+
+def relation_html(r: dict) -> str:
+    why = r.get("why") or "<i>no reason given</i>"
+    if r.get("why"):
+        why = esc(why)
+    return f"{esc(RELATION_LABEL.get(r.get('type'), r.get('type', '')))} <b>{esc(r.get('to', ''))}</b> — {why}"
 
 
 class ChangeCard(QFrame):
@@ -36,7 +63,8 @@ class ChangeCard(QFrame):
             "title": card.get("title", ""), "action": card.get("action", "add"),
             "description": card.get("description", ""), "status": card.get("status", ""),
             "subtasks": card.get("subtasks", []), "depends_on": card.get("depends_on", []),
-            "impact": card.get("impact", "")}
+            "impact": card.get("impact", ""), "key_points": card.get("key_points", []),
+            "relations": card.get("relations", [])}
         self.said = card.get("said_as") or card.get("title", "")
         self.setObjectName("card")
         lay = QVBoxLayout(self)
@@ -78,7 +106,15 @@ class ChangeCard(QFrame):
         self.f_status = QComboBox()
         self.f_status.addItems([s for s in STATUSES if s != "archived"])
         self.f_desc = QPlainTextEdit()
-        self.f_desc.setFixedHeight(60)
+        self.f_desc.setFixedHeight(90)
+        self.f_kp = QPlainTextEdit()
+        self.f_kp.setPlaceholderText("One fact per line.")
+        self.f_kp.setFixedHeight(90)
+        self.f_rel = QPlainTextEdit()
+        self.f_rel.setPlaceholderText("One per line:  kind | other item | why   (\"needs\" = needs it first)\n"
+                                      "kind = needs, part of, produces, controls, uses or related\n"
+                                      "e.g.  produces | ATP | it breaks down glucose to release energy")
+        self.f_rel.setFixedHeight(80)
         self.f_subs = QPlainTextEdit()
         self.f_subs.setPlaceholderText("One subtask per line. Start a line with [x] if it's done.")
         self.f_subs.setFixedHeight(70)
@@ -88,9 +124,11 @@ class ChangeCard(QFrame):
         self.f_impact = QLineEdit()
         form.addRow("Name", self.f_title)
         form.addRow("Status", self.f_status)
-        form.addRow("What it does", self.f_desc)
+        form.addRow("What it is", self.f_desc)
+        form.addRow("Key points", self.f_kp)
         form.addRow("Subtasks", self.f_subs)
-        form.addRow("Needs first", self.f_deps)
+        # dependencies are the "needs" lines of the connections field (one place to edit them)
+        form.addRow("How it connects\n(and why)", self.f_rel)
         form.addRow("Impact", self.f_impact)
         self.form_w.setVisible(False)
         lay.addWidget(self.form_w)
@@ -101,15 +139,17 @@ class ChangeCard(QFrame):
         self.toggle.clicked.connect(self._toggle)
         for w in (self.f_title, self.f_impact):
             w.textEdited.connect(self._on_edit)
-        for w in (self.f_desc, self.f_subs, self.f_deps):
+        for w in (self.f_desc, self.f_subs, self.f_deps, self.f_kp, self.f_rel):
             w.textChanged.connect(self._on_edit)
         self.f_status.currentTextChanged.connect(self._on_edit)
         self.refresh()
 
     # ----- form <-> card -----
     def _load_form(self):
+        sync_relations(self.card)          # every dependency shows up as a "needs" line
         c = self.card
-        for w in (self.f_title, self.f_desc, self.f_subs, self.f_deps, self.f_impact, self.f_status):
+        for w in (self.f_title, self.f_desc, self.f_subs, self.f_deps, self.f_impact, self.f_status, self.f_kp,
+                  self.f_rel):
             w.blockSignals(True)
         self.f_title.setText(c.get("title", ""))
         self.f_status.setCurrentText(c.get("status") or "proposed")
@@ -117,7 +157,10 @@ class ChangeCard(QFrame):
         self.f_subs.setPlainText("\n".join(_lines(c.get("subtasks"))))
         self.f_deps.setPlainText("\n".join(_lines(c.get("depends_on"))))
         self.f_impact.setText(c.get("impact", ""))
-        for w in (self.f_title, self.f_desc, self.f_subs, self.f_deps, self.f_impact, self.f_status):
+        self.f_kp.setPlainText("\n".join(_lines(c.get("key_points"))))
+        self.f_rel.setPlainText(relations_to_text(c.get("relations")))
+        for w in (self.f_title, self.f_desc, self.f_subs, self.f_deps, self.f_impact, self.f_status, self.f_kp,
+                  self.f_rel):
             w.blockSignals(False)
 
     def value(self) -> dict:
@@ -127,9 +170,12 @@ class ChangeCard(QFrame):
             "title": self.f_title.text().strip(), "status": self.f_status.currentText(),
             "description": self.f_desc.toPlainText().strip(),
             "subtasks": [s for s in self.f_subs.toPlainText().splitlines() if s.strip()],
-            "depends_on": [s.strip() for s in self.f_deps.toPlainText().splitlines() if s.strip()],
             "impact": self.f_impact.text().strip(),
+            "key_points": [s.strip() for s in self.f_kp.toPlainText().splitlines() if s.strip()],
+            "relations": relations_from_text(self.f_rel.toPlainText()),
         })
+        c["depends_on"] = [r["to"] for r in c["relations"] if r["type"] == "needs"]
+        sync_relations(c)
         return c
 
     def _on_edit(self, *_):
@@ -154,14 +200,17 @@ class ChangeCard(QFrame):
         self.card.update({"action": "add", "feature_id": None, "needs_confirmation": False, "match_confirmed": False,
                           "title": self.said, "description": m.get("description", ""),
                           "status": m.get("status") or "proposed", "subtasks": list(m.get("subtasks") or []),
-                          "depends_on": list(m.get("depends_on") or []), "impact": m.get("impact", "")})
+                          "depends_on": list(m.get("depends_on") or []), "impact": m.get("impact", ""),
+                          "key_points": list(m.get("key_points") or []),
+                          "relations": [dict(r) for r in m.get("relations") or []]})
 
     def _as_existing(self, fid: str):
         m = self.mention
         base = {"action": "archive" if m.get("action") == "archive" else "change", "title": self.said,
                 "description": m.get("description", ""), "status": m.get("status", ""),
                 "subtasks": list(m.get("subtasks") or []), "depends_on": list(m.get("depends_on") or []),
-                "impact": m.get("impact", "")}
+                "impact": m.get("impact", ""), "key_points": list(m.get("key_points") or []),
+                "relations": [dict(r) for r in m.get("relations") or []]}
         merged = _card_from_existing(base, self.by_id[fid], self.titles)
         self.card.update(merged)
         self.card.update({"needs_confirmation": True, "match_confirmed": True})
@@ -260,11 +309,14 @@ class ChangeCard(QFrame):
         elif action == "add":
             items.append("Adds a new feature to the project.")
             if c.get("description"):
-                items.append(f"<b>What it does:</b> {esc(c['description'])}")
+                items.append(f"<b>What it is:</b> {esc(c['description'])}")
+            if _lines(c.get("key_points")):
+                items.append("<b>Key points:</b><br>" + "<br>".join("• " + esc(k) for k in _lines(c["key_points"])))
             if _lines(c.get("subtasks")):
                 items.append("<b>Subtasks:</b> " + esc("; ".join(_lines(c["subtasks"]))))
-            if _lines(c.get("depends_on")):
-                items.append("<b>Needs first:</b> " + esc(", ".join(_lines(c["depends_on"]))))
+            if c.get("relations"):
+                items.append("<b>How it connects:</b><br>" + "<br>".join("• " + relation_html(r)
+                                                                       for r in c["relations"]))
             if c.get("impact"):
                 items.append(f"<b>Impact:</b> {esc(c['impact'])}")
         else:
@@ -272,14 +324,25 @@ class ChangeCard(QFrame):
             if c.get("status") and c.get("status") != p.get("status"):
                 items.append(f"<b>Status:</b> {esc(p.get('status', '?'))} → <b>{esc(c['status'])}</b>")
             if c.get("description") and c.get("description") != p.get("description"):
-                items.append(f"<b>What it does (updated):</b> {esc(c['description'])}")
+                items.append(f"<b>What it is (updated):</b> {esc(c['description'])}")
+            old_k = {norm(k) for k in p.get("key_points") or []}
+            new_k = [k for k in _lines(c.get("key_points")) if norm(k) not in old_k]
+            if new_k:
+                items.append("<b>New key points:</b><br>" + "<br>".join("• " + esc(k) for k in new_k))
             old_s = {norm(s.get('text', '')) for s in p.get("subtasks") or []}
             new_s = [s for s in _lines(c.get("subtasks")) if norm(s.replace("[x]", "")) not in old_s]
             if new_s:
                 items.append("<b>New subtasks:</b> " + esc("; ".join(new_s)))
             old_d = {norm(self.titles.get(d, d)) for d in p.get("depends_on") or []}
             new_d = [d for d in _lines(c.get("depends_on")) if norm(d) not in old_d]
-            if new_d:
+            old_r = {(r.get("type"), norm(r.get("to_title") or self.titles.get(r.get("to"), r.get("to", ""))),
+                      r.get("why", "")) for r in p.get("relations") or []}
+            new_r = [r for r in c.get("relations") or []
+                     if (r.get("type"), norm(r.get("to", "")), r.get("why", "")) not in old_r]
+            if new_r:
+                items.append("<b>How it connects (new or updated):</b><br>"
+                             + "<br>".join("• " + relation_html(r) for r in new_r))
+            elif new_d:
                 items.append("<b>Now needs first:</b> " + esc(", ".join(new_d)))
             if c.get("impact") and c.get("impact") != p.get("impact"):
                 items.append(f"<b>Impact:</b> {esc(c['impact'])}")
@@ -295,6 +358,9 @@ class ChangeCard(QFrame):
             else:
                 notes.append(f"<span style='color:{BAD}'>Not found in the transcript: “{esc(e.get('quote', ''))}”"
                              "</span>")
+        if c.get("excerpts") and action != "archive":
+            notes.append(f"<span style='color:{MUTED}'>{len(c['excerpts'])} line(s) of what was said are saved "
+                         "with it, so you can later ask why.</span>")
         if not any(e.get("supported") for e in c.get("evidence") or []) and not c.get("user_edited"):
             notes.append(f"<span style='color:{BAD}'>This wasn't clearly said in the meeting, so it starts "
                          "switched off. Tick “Include this change” only if it is right.</span>")
@@ -355,6 +421,7 @@ class ReviewPanel(QWidget):
         lay.setContentsMargins(12, 8, 12, 8)
         self.h = QLabel()
         self.h.setObjectName("h1")
+        self.h.setWordWrap(True)
         self.sub = QLabel()
         self.sub.setObjectName("muted")
         self.sub.setWordWrap(True)
@@ -368,6 +435,10 @@ class ReviewPanel(QWidget):
                                           "Meetings you add appear in the list on the left. Click one to review it.")
         # page 1: working
         self.p_busy = self._message_page("Working on it…", "")
+        self.live_view = QPlainTextEdit()
+        self.live_view.setReadOnly(True)
+        self.live_view.setVisible(False)
+        self.p_busy.layout().insertWidget(2, self.live_view, 1)
         # page 2: problem / transcript only
         self.p_problem = QWidget()
         pl = QVBoxLayout(self.p_problem)
@@ -441,7 +512,12 @@ class ReviewPanel(QWidget):
 
         bar = QFrame()
         bar.setObjectName("section")
-        bl = QHBoxLayout(bar)
+        bv = QVBoxLayout(bar)
+        bv.setSpacing(8)
+        top = QHBoxLayout()
+        bl = QHBoxLayout()
+        bv.addLayout(top)
+        bv.addLayout(bl)
         self.step3 = QLabel("Step 3 ·")
         self.step3.setObjectName("h2")
         self.b_save = QPushButton("Save to project")
@@ -455,9 +531,11 @@ class ReviewPanel(QWidget):
         self.b_more.setMenu(menu)
         self.status_line = QLabel()
         self.status_line.setWordWrap(True)
-        bl.addWidget(self.step3)
+        self.step3.setText("Step 3 · Save")
+        top.addWidget(self.step3, 0, Qt.AlignTop)
+        top.addWidget(self.status_line, 1)
         bl.addWidget(self.b_save)
-        bl.addWidget(self.status_line, 1)
+        bl.addStretch(1)
         bl.addWidget(self.b_discard)
         bl.addWidget(self.b_more)
         rl.addWidget(bar)
@@ -516,7 +594,21 @@ class ReviewPanel(QWidget):
                    "summarizing": "The AI is reading the meeting and comparing it with your project. "
                                   "This usually takes 10–60 seconds.",
                    "saving": "Saving to the project…"}[stage]
+            live = s.get("live") and stage in ("recording", "recorded", "transcribing")
+            if live:
+                st = s.get("live_stats") or {}
+                msg = ("Recording. The transcript below grows every 30 seconds"
+                       + (f"; notes are ready for {st.get('notes_done', 0)} part(s) so far" if st.get("notes_done")
+                          else "") + ".") if stage == "recording" else \
+                    "Recording stopped. Finishing the last seconds of the transcript and the notes…"
             self.p_busy.body.setText(msg + "\n\nYou can keep using the app meanwhile.")
+            self.live_view.setVisible(bool(live))
+            if live:
+                bar = self.live_view.verticalScrollBar()
+                at_end = bar.value() >= bar.maximum() - 4
+                self.live_view.setPlainText(sm.transcript(sid) or "(the first lines appear after about 30 seconds)")
+                if at_end:
+                    bar.setValue(bar.maximum())
             self.stack.setCurrentWidget(self.p_busy)
             return
         if stage in ("failed", "transcribed", "cleanup_failed"):
