@@ -20,7 +20,8 @@ QNN/HTP backend.
 | **Qwen3-0.6B** (LLM) | 16a4w, kv, 512 ctx | **47.9 tok/s** decode, 47.5 tok/s prompt, TTFT 0.41 s |
 | **Whisper-tiny** (speech-to-text) | 16a8w | 51 ms encode per 30 s, about 7 ms/token, WER 17.1 % |
 | **Whisper-small** (speech-to-text) | 16a8w | 134 ms encode per 30 s, about 49 ms/token, **WER 10.1 %** |
-| Phi-4-mini-instruct | **W8A16** (new recipe), 2048 ctx | export script ready (`scripts/llm/export_phi4mini_w8a16.ps1`); needs a large page file |
+| Phi-4-mini-instruct | **W8A16** (new recipe), kv, 2048 ctx | 12.2 tok/s decode, ~10 tok/s prompt, 7/10 on our test prompts |
+| **Qwen3-1.7B** (MeetingGraph's LLM) | 8-bit KV, **hybrid (128-token prefill)**, 8000 ctx, QAIRT 2.46 | **124 tok/s prompt**, 12.0 tok/s decode, loads in 2.4 s; meeting notes **3-6x faster than Phi** |
 
 All of these compile to a **single QNN delegate call per method with zero CPU kernels**
 (`scripts/pte_delegation_report.py`). During Qwen generation the NPU compute engine reads 100 % while
@@ -83,12 +84,18 @@ git apply ..\Executorch_MOE_Qualcomm\patches\0001-qnn_executor_runner-fix-window
   (`calibration_encodings.pt`) and trusts it only after replaying it reproduces the original encoding override
   exactly, so a crash after calibration costs minutes instead of a full re-calibration.
 
+- **[0007](patches/0007-qnn_llama_runner-3d-attention-mask.patch): 3-D attention masks.** Newer exports (the
+  QAIRT 2.46 Qwen3-1.7B 8k model) store the mask as `[1, AR, CL]`, not `[1, 1, AR, CL]`. The runner read fixed
+  dims 2/3, took the 8000-token context as the prompt block size and crashed in prefill; it now reads the last two
+  dims. A model compiled with a newer QAIRT also needs that QAIRT's runtime DLLs next to the runner
+  ("Using newer context binary on old SDK" otherwise): `scripts/llm/setup_qwen3_1_7b.ps1` sets that up.
+
 Apply all patches in order (each applies cleanly on v1.5.1 plus the earlier ones): `git apply ..\Executorch_MOE_Qualcomm\patches\*.patch`
 
 ## MeetingGraph (`meetinggraph/`)
 
 A private meeting memory that runs on the NPU: record or import a meeting, get a transcript (Whisper-small on the
-NPU), notes and feature changes (Phi-4-mini W8A16 on the NPU), approve them, then browse the project map and ask
+NPU), notes and feature changes (Qwen3-1.7B, 8k context, on the NPU; Phi-4-mini W8A16 before), approve them, then browse the project map and ask
 cited questions. Nothing leaves the laptop. **Every measured number is in
 [meetinggraph/QUANTIFY.md](meetinggraph/QUANTIFY.md)** (kept up to date); setup is in
 [meetinggraph/README.md](meetinggraph/README.md).

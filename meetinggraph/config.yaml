@@ -6,11 +6,12 @@ llm:
   # heuristic          = no model; rule-based extraction (works immediately, for plumbing tests)
   # ollama             = local Ollama server on 127.0.0.1 (dev laptop; CPU/GPU, NOT the NPU)
   # executorch_runner  = ExecuTorch runner executable (Snapdragon NPU path, set up on the Dell)
-  backend: executorch_runner    # Phi-4-mini W8A16 on the Hexagon NPU (ExecuTorch QNN)
+  backend: executorch_runner    # Qwen3-1.7B (8k context, hybrid) on the Hexagon NPU (ExecuTorch QNN)
   label: ""                     # optional text shown in the app; empty = automatic
-  # Phi-4-mini was exported with a 2048-token context (prompt + reply). 2500 chars (~700 tokens) of
-  # transcript + the FEATURES prompt leaves ~800 tokens for the JSON reply.
-  max_transcript_chars_per_chunk: 2500
+  # Qwen3-1.7B has an 8000-token context: a whole typical meeting fits in one request. The app still sizes
+  # each chunk to the context (plan_requests), so this is only an upper bound.
+  # (Phi-4-mini, 2048-token context, used 2500.)
+  max_transcript_chars_per_chunk: 20000
   ollama:
     url: http://127.0.0.1:11434
     model: qwen2.5:3b-instruct   # bigger/better: qwen2.5:7b-instruct (needs ~6 GB RAM)
@@ -19,13 +20,17 @@ llm:
   executorch_runner:
     # qnn_llama_runner mode: the app builds the command (sizes --seq_len per prompt, strips the chat template).
     # The runner folder must also hold qnn_executorch_backend.dll, QnnHtp*.dll, QnnSystem.dll and the v73 skel.
-    runner: C:/et/llm/npu-run/qnn_llama_runner.exe
-    model_path: C:/et/llm/phi4mini_w8a16_2k/kv_llama_qnn.pte   # v2 (16-bit KV): C:/et/llm/phi4mini_w8a16kv16_2k/...
-    tokenizer_path: C:/et/llm/phi4mini_w8a16_2k/tokenizer.json
-    decoder_model_version: phi_4_mini
-    max_seq_len: 2048           # must match the export's --max_seq_len
+    # Qwen3-1.7B was compiled with QAIRT 2.46, so it runs from npu-run-246 (the 2.46 runtime DLLs + our runner).
+    # Phi-4-mini (QAIRT 2.37): runner C:/et/llm/npu-run/..., model C:/et/llm/phi4mini_w8a16_2k/kv_llama_qnn.pte,
+    #   tokenizer from the same folder, decoder_model_version phi_4_mini, max_seq_len 2048, eval_mode 0.
+    runner: C:/et/llm/npu-run-246/qnn_llama_runner.exe
+    model_path: C:/et/llm/qwen3_1_7b_ctx8k/sc8380_qwen3-1_7b_ctxt-8000.pte
+    tokenizer_path: C:/et/llm/qwen3_1_7b_ctx8k/tokenizer.json
+    decoder_model_version: qwen3
+    max_seq_len: 8000           # must match the export's context length
+    eval_mode: 1                # hybrid: reads the prompt 128 tokens per NPU step
     # Keep the model loaded between requests (saves the ~5 s load per request). Unloads after keep_loaded_s idle.
-    server_runner: C:/et/llm/npu-run/qnn_llama_runner_server.exe
+    server_runner: C:/et/llm/npu-run-246/qnn_llama_runner_server.exe
     keep_loaded_s: 900          # 15 min: covers reviewing a meeting and asking follow-ups
     # Generic alternative (leave runner empty): command with {prompt_file} {prompt} {output_file} {max_tokens}
     command: []

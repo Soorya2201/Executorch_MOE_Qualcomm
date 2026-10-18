@@ -44,7 +44,10 @@ and fast enough to take notes while you are still talking.**
 | **0** | bytes sent to the cloud. Speech, notes, search and answers all run locally |
 | **100 %** | of the AI model's maths on the Hexagon NPU: 8 NPU calls, **0** operators falling back to the CPU |
 | **~9 %** | CPU use while the 3.8-billion-parameter model is generating (the NPU does the work) |
-| **12.2 tokens/s** | Phi-4-mini writing speed on the NPU |
+| **3-6× faster notes** | after switching to Qwen3-1.7B (8k context, hybrid): biology lecture **398 s → 134 s**, design review 266 s → 47 s, kickoff 162 s → 34 s |
+| **124 tokens/s** | prompt reading on the NPU with Qwen3-1.7B's 128-token prefill graph (Phi read ~10 tokens/s) |
+| **2.4 s** | to load the meeting model onto the NPU (Qwen3-1.7B, 1.8 GB) |
+| **12.2 tokens/s** | writing speed on the NPU (Phi-4-mini 12.2, Qwen3-1.7B 12.0) |
 | **5.8× real time** | live speech-to-text: 30 s of audio transcribed in 5.0 s (Whisper-small on the NPU) |
 | **10.1 %** | word error rate, Whisper-small on the NPU (17.1 % for Whisper-tiny) |
 | **~2 %** | CPU use while Whisper transcribes: encoder and decoder are **1 NPU call each, 0 CPU operators** |
@@ -62,7 +65,8 @@ Windows 11 on ARM.
 
 | Job | Model | What we did |
 |---|---|---|
-| Notes, features, answers | **Phi-4-mini-instruct** (Microsoft, 3.8B) | Post-training quantization to **W8A16** (8-bit weights, 16-bit activations), 8-bit KV cache, 2,048-token context, calibrated on our own samples, split into 8 shards, compiled to NPU binaries |
+| Notes, features, answers (**now**) | **Qwen3-1.7B** (Alibaba) | 8-bit KV cache, **8,000-token context**, hybrid: a 128-token prefill graph + a 1-token decode graph, compiled for SC8380 with QAIRT 2.46. Ran on our runner after a fix for its 3-D attention mask (patch 0007) and the 2.46 runtime DLLs |
+| Notes, features, answers (before) | **Phi-4-mini-instruct** (Microsoft, 3.8B) | Post-training quantization to **W8A16** (8-bit weights, 16-bit activations), 8-bit KV cache, 2,048-token context, calibrated on our own samples, split into 8 shards, compiled to NPU binaries |
 | Speech to text | **Whisper-small** (OpenAI, 244M) | 16a8w quantization, exported encoder + decoder for the NPU, our own NumPy log-mel front end (matches Hugging Face to 1.4e-5) |
 | Reference | Whisper-tiny, Qwen3-0.6B, DeepLabV3 | Brought up first to prove the pipeline end to end |
 
@@ -93,20 +97,29 @@ Every step below was made to get more work onto the Hexagon NPU, or to keep it f
 | 7 | **Stay loaded 15 minutes** | The NPU model is kept for 900 s after the last request, then freed | Back-to-back meetings skip the reload; idle laptops get their memory back |
 | 8 | **One NPU at a time** (`NPU_LOCK`) | Whisper and Phi take turns on the NPU instead of fighting over it | No failed loads or stalls while recording and summarizing |
 | 9 | **Context-sized requests** | Transcript chunks and prompts are sized to the model's 2,048-token window; compact prompts for small contexts | No truncated prompts; fewer NPU requests per meeting |
-| 10 | **Hybrid prefill (in progress)** | Adds a graph that reads 32 prompt tokens per NPU step instead of 1 | Prompt reading is ~80 % of meeting time; export blocked by RAM, see below |
+| 10 | **Hybrid prefill** | A graph that reads 128 prompt tokens per NPU step instead of 1 | **Done with Qwen3-1.7B: 124 tok/s prompt, notes 3-6× faster.** (Our own Phi hybrid export is still blocked by RAM) |
+| 10b | **8k context** | The whole meeting fits in one request instead of 2,500-character chunks | Biology lecture: 5 requests → 2 |
+| 10c | **Newer QAIRT runtime, side by side** | Qwen runs with the QAIRT 2.46 DLLs in their own folder; Whisper keeps 2.37 | Nothing that worked was touched |
 | 11 | **Memory-safe exporter** | Re-ordered so the exporter never holds three copies of the model; frees each stage | Peak: 3 copies → 2 |
 | 12 | **Verified calibration checkpoint** | The slow calibration step is saved once and fingerprint-checked on resume | A crashed export resumes without re-calibrating |
 | 13 | **Clear memory errors** | When the NPU model cannot load, the app says how many GB are free vs needed | No silent "model failed" |
 
-**Where the time goes today** (Phi-4-mini on the NPU, real meetings):
+**Phi-4-mini vs Qwen3-1.7B, same transcripts, the app's full notes + features pipeline:**
 
-| Task | Time |
-|---|---|
-| Notes + features for a saved meeting | **387 s** (one meeting), 398 s (2,051-character test meeting, 5 requests) |
-| One Ask answer over a whole project | 407 s (prompt reading dominates) |
-| Short request, model loaded | **1.4 s** |
+| Meeting | Phi-4-mini (kv, 2k) | **Qwen3-1.7B (hybrid, 8k)** | Speed-up |
+|---|---|---|---|
+| Biology lecture, 2,051 chars | 398 s, 5 requests | **134 s, 2 requests** | 3.0× |
+| Atlas design review, 1,285 chars | 266 s, 3 requests | **47 s, 3 requests** | 5.7× |
+| Atlas kickoff, 508 chars | 162 s, 2 requests | **34 s, 3 requests** | 4.8× |
+| Atlas sprint sync, 492 chars | n/a | **42 s** | |
+| Model load (warm) | 4.2 s | **2.4 s** | 1.7× |
 
-Hybrid prefill (row 10) is the fix for both long times: it attacks exactly the prompt-reading part.
+Honest quality note: on the kickoff, Phi listed 5 features and Qwen 1 (Qwen merged "login & offline sync" into one
+name, which the transcript check then removed); on the other meetings Qwen found as much or more (6 grounded
+organelles in the lecture) and filled decisions and questions that Phi left empty. Every item still has to pass
+the transcript check, and the one-feature-per-minute rule tops up any shortfall.
+
+Before the switch (Phi): one real meeting 387 s, one Ask answer 407 s, a short request 1.4 s with the model loaded.
 
 ## 7. Engineering we had to invent
 
@@ -151,11 +164,12 @@ Hybrid prefill (row 10) is the fix for both long times: it attacks exactly the p
 
 | What | Status |
 |---|---|
-| Hybrid Phi: prompt-reading speed (tokens/s) | *pending: calibration done and checkpointed; QNN compile needs more RAM* |
+| Hybrid prompt reading | **done with Qwen3-1.7B: 124 tok/s.** Our own hybrid Phi export: calibration checkpointed, QNN compile needs more RAM |
 | Hybrid Phi: time to notes for a 2,000-character meeting | *pending* (today: 398 s in 5 requests; target: under a minute) |
 | Hybrid Phi: accuracy on the 10-prompt suite | *pending* (must stay at v1's 7/10) |
 | Whisper + Phi on the NPU at the same time (live notes while recording) | *serialized by NPU_LOCK; concurrent run pending* |
-| New downloaded model on the NPU: speed vs Phi | *pending: download in progress* |
+| Qwen3-1.7B accuracy on the 10-prompt suite | *pending* |
+| Ask with Qwen3-1.7B (8k context) | *pending* |
 
 ## 11. Talk track (60 seconds)
 
@@ -165,7 +179,7 @@ Hybrid prefill (row 10) is the fix for both long times: it attacks exactly the p
 > transcribing, six times faster than I can speak. [Stop.] It has already written the notes, and every
 > decision points back to the sentence it came from. I approve, and the project map updates: what changed,
 > what depends on what, and why.
-> A 3.8-billion-parameter model, on the NPU, using about 9 % of the CPU.
+> A language model with an 8,000-token memory, on the NPU, writing the notes in about two minutes.
 > And the Wi-Fi has been off the whole time."
 
 ---
@@ -181,3 +195,6 @@ Hybrid prefill (row 10) is the fix for both long times: it attacks exactly the p
   6.0 s for the test clip, WER 12.3 % on our own meeting recording. Real meeting notes: 387 s. Ask: 407 s.
   Hybrid export: calibration checkpointed, compile out of memory. Review shows only transcript-backed
   features, at least one per minute of speech. 68 tests passing.
+- 2026-10-18 (evening): switched the meeting model to Qwen3-1.7B (8k, hybrid, QAIRT 2.46): load 2.4 s, prompt
+  124 tok/s, decode 12.0 tok/s. Notes: biology 398 s → 134 s, design review 266 s → 47 s, kickoff 162 s → 34 s.
+  Runner patch 0007 (3-D attention mask).

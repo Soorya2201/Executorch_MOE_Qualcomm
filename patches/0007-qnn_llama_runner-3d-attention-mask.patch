@@ -1,0 +1,36 @@
+From: Soorya2201 <107684450+Soorya2201@users.noreply.github.com>
+Subject: [PATCH] qnn_llama_runner: accept 3-D attention masks ([1, AR, CL])
+
+Newer exports (e.g. the QAIRT 2.46 Qwen3-1.7B 8k model) store the attention mask as
+[1, AR, CL] instead of [1, 1, AR, CL]. The runner read sizes()[2]/[3] and got the context
+length as the AR length (and an out-of-range read), then crashed in prefill. Read the last two dims.
+Apply after 0001-0006.
+
+---
+--- a/examples/qualcomm/oss_scripts/llama/runner/runner.cpp
++++ b/examples/qualcomm/oss_scripts/llama/runner/runner.cpp
+@@ -247,10 +247,11 @@
+   int32_t token_generator_ar_len = 0;
+   int32_t max_cache_len = 0;
+   int32_t max_ar_len = 0;
+-  // atten mask: [1, 1, AR-N, CL]
++  // atten mask: [1, 1, AR-N, CL] or [1, AR-N, CL] (newer exports): AR and CL are always the last two dims
+   auto atten_mask_meta_token = method_meta->input_tensor_meta(1);
+-  token_generator_ar_len = atten_mask_meta_token->sizes()[2];
+-  context_len_ = atten_mask_meta_token->sizes()[3];
++  const auto token_mask_sizes = atten_mask_meta_token->sizes();
++  token_generator_ar_len = token_mask_sizes[token_mask_sizes.size() - 2];
++  context_len_ = token_mask_sizes[token_mask_sizes.size() - 1];
+   if (eval_mode_ == EvalMode::kKVCached) {
+     prompt_processor_ar_len = token_generator_ar_len;
+   } else if (
+@@ -259,7 +260,8 @@
+     auto atten_mask_meta_prompt =
+         module_->method_meta(prompt_processor_method_name)
+             ->input_tensor_meta(1);
+-    prompt_processor_ar_len = atten_mask_meta_prompt->sizes()[2];
++    const auto prompt_mask_sizes = atten_mask_meta_prompt->sizes();
++    prompt_processor_ar_len = prompt_mask_sizes[prompt_mask_sizes.size() - 2];
+   }
+   if (prompt_processor_ar_len == context_len_)
+     max_cache_len = context_len_;
