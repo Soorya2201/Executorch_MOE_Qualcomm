@@ -6,17 +6,17 @@ Sized to the screen: opens maximised and fits a 1280x752 work area (2560x1600 at
 from __future__ import annotations
 
 from PySide6.QtCore import QRect, QSize, Qt, QThreadPool, QTimer, QUrl
-from PySide6.QtGui import QAction, QFontMetrics, QDesktopServices, QGuiApplication
+from PySide6.QtGui import QAction, QDesktopServices, QFontMetrics, QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QButtonGroup, QFrame, QHBoxLayout, QInputDialog, QLabel, QLineEdit, QListWidget,
                                QListView, QListWidgetItem, QMainWindow, QMenu, QMessageBox, QPushButton, QSplitter,
                                QStatusBar, QStyledItemDelegate, QTabWidget, QTextBrowser, QToolButton, QVBoxLayout,
                                QWidget)
 
 from ..pipeline.query import answer
-from ..workspace.graph import build_graph
 from .add_meeting import AddMeetingDialog, RecordSetupDialog
 from .common import STAGE_COLOR, STAGE_TEXT, STATUS_COLOR, Job, dot_icon, esc, wrapping_list
 from . import art, theme
+from .components import Toast
 from .graph_view import GraphView
 from .pages import feature_html, meeting_html
 from .review import ReviewPanel
@@ -212,8 +212,13 @@ class MainWindow(QMainWindow):
         self.feature_view.setOpenLinks(False)
         self.tabs.addTab(list_and_view(self.features, self.feature_view, self.feature_filter), "Features")
 
-        self.graph = GraphView()
-        self.tabs.addTab(self.graph, "Map")
+        self.graph = GraphView()                      # = map_view.MapView (RP-1106's Map)
+        map_panel = QFrame()
+        map_panel.setObjectName("panel")
+        mpl = QVBoxLayout(map_panel)
+        mpl.setContentsMargins(1, 1, 1, 1)
+        mpl.addWidget(self.graph)
+        self.tabs.addTab(map_panel, "Map")
         root.addWidget(self.tabs)
 
         # right: ask
@@ -249,7 +254,7 @@ class MainWindow(QMainWindow):
         rr.addWidget(note)
         root.addWidget(right)
         root.setSizes([230, 900, 300])
-        self.backdrop.add_panels(left, sl, right, *self.graph.panels)
+        self.backdrop.add_panels(left, sl, right, map_panel)
 
         sb = QStatusBar()
         sb.setSizeGripEnabled(False)
@@ -270,7 +275,17 @@ class MainWindow(QMainWindow):
         self.feature_filter.textChanged.connect(self.refresh_features)
         for v in (self.meeting_view, self.feature_view, self.chat):
             v.anchorClicked.connect(self._open_link)
-        self.graph.open_node.connect(self.open_item)
+        self.graph.open_node.connect(self._open_from_map)
+        self.graph.go_meetings.connect(lambda: self.go(TAB_MEETINGS))
+        self.graph.set_context(ctx.store, ctx.layout.root)
+        self.nav_back: list = []                     # where Alt+Left returns to (after opening a node from the Map)
+        self.toast = Toast(self)
+        keys = [QKeySequence(Qt.ALT | Qt.Key_Left)]
+        keys += [k for k in QKeySequence.keyBindings(QKeySequence.Back) if k not in keys]
+        self._back_sc = QShortcut(self)
+        self._back_sc.setKeys(keys)
+        self._back_sc.setContext(Qt.WindowShortcut)
+        self._back_sc.activated.connect(self.go_back)
         self.review.request.connect(self.handle_request)
         self.b_add.clicked.connect(self.add_meeting)
         self.b_new.clicked.connect(self.new_project)
@@ -368,7 +383,7 @@ class MainWindow(QMainWindow):
             self.features.clear()
             self.meeting_view.clear()
             self.feature_view.clear()
-            self.graph.show_graph({"nodes": [], "edges": []})
+            self.graph.load_project(None)
             self.chat_title.setText("Ask a question")
             return
         self.project_id = cur.data(Qt.UserRole)
@@ -415,7 +430,7 @@ class MainWindow(QMainWindow):
 
     def refresh_graph(self):
         if self.project_id:
-            self.graph.show_graph(build_graph(self.ctx.store, self.project_id))
+            self.graph.load_project(self.project_id)     # read + (rarely) laid out in a background thread
 
     # ---------- viewers ----------
     def _kind_of(self, iid: str) -> str:
@@ -456,6 +471,27 @@ class MainWindow(QMainWindow):
                 lst.setCurrentRow(i)
                 self.go(tab)
                 return
+
+    def models_busy(self) -> bool:
+        """True while the AI is answering, transcribing or making notes (the Map waits with its layout)."""
+        return self.model_pool.activeThreadCount() > 0 or bool(self.ctx.sm.live)
+
+    def _open_from_map(self, kind: str, iid: str):
+        """Double-click / Open on the Map: remember the Map's view so Alt+Left (or the toast) comes back to it."""
+        self.nav_back.append(("map", self.graph.view_state()))
+        del self.nav_back[:-20]
+        self.open_item(kind, iid)
+        name = self.graph.canvas.label_of(iid)
+        self.toast.show_message(f"Opened “{name}”.", "Back to Map", self.go_back)
+
+    def go_back(self):
+        if not self.nav_back:
+            return
+        where, state = self.nav_back.pop()
+        if where == "map":
+            self.toast.dismiss()
+            self.go(TAB_MAP)
+            QTimer.singleShot(0, lambda: self.graph.restore_state(state))
 
     def show_transcript(self, meeting_id: str):
         if not self.project_id:
@@ -608,6 +644,7 @@ class MainWindow(QMainWindow):
 
         def done(res):
             self.busy.discard(sid)
+            QTimer.singleShot(0, lambda: self.graph.set_busy(self.models_busy()))
             self._last_sig = None
             self.refresh_sessions()
             if self.review.sid == sid:
@@ -628,6 +665,7 @@ class MainWindow(QMainWindow):
             self.refresh_sessions()
 
         (self.model_pool if model else self.pool).start(Job(fn, on_done=done, on_error=err))
+        self.graph.set_busy(self.models_busy())
 
     def handle_request(self, action: str, sid: str, payload):
         sm = self.ctx.sm

@@ -60,8 +60,10 @@ def text_problems(win: QWidget) -> list[str]:
             if need > w.height() + 2:
                 out.append(f"text cut off at the bottom ({need}px needed, {w.height()}px shown): {txt[:60]!r}")
             continue
-        need = w.sizeHint().width() if isinstance(w, QAbstractButton) else \
-            max(fm.horizontalAdvance(line) for line in txt.split("\n"))
+        # buttons: the text (plus its icon and a 6 px margin) must fit; padding may shrink, text may not be cut
+        text_w = max(fm.horizontalAdvance(line) for line in txt.split("\n"))
+        icon_w = w.iconSize().width() + 4 if isinstance(w, QAbstractButton) and not w.icon().isNull() else 0
+        need = text_w + icon_w + 6 if isinstance(w, QAbstractButton) else text_w
         if need > w.width() + 1:
             out.append(f"text wider than its box ({need}px > {w.width()}px): {txt[:60]!r}")
     # only the part actually on screen: content scrolled under a bar is clipped by its scroll area, not overlapping

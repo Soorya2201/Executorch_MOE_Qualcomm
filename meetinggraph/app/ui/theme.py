@@ -176,6 +176,61 @@ QMessageBox QLabel {{ color: {TEXT_2}; }}
 """
 
 
+# ---------------------------------------------------------------------------------------------------------
+# Bridge for the Map (map_view.py and its helpers, taken unchanged from RP-1106's branch): they read colours and
+# fonts through tokens.c()/theme.c()/qcolor()/font(). Point those tokens at this Fluent palette, light mode only,
+# so the Map matches the rest of the app. Nothing outside the Map uses these names.
+# ---------------------------------------------------------------------------------------------------------
+from PySide6.QtCore import QObject, Signal  # noqa: E402
+
+from . import tokens as tk  # noqa: E402
+
+tk.PALETTES["light"].update({
+    "bg": BG, "surface": SURFACE, "sidebar": SUBTLE, "surface2": SUNKEN, "input": SURFACE,
+    "text": TEXT, "secondary": MUTED, "tertiary": FAINT,
+    "separator": "rgba(0,0,0,0.08)", "separator_solid": BORDER,
+    "accent": ACCENT, "accent_hover": ACCENT_HOVER, "accent_press": ACCENT_PRESSED,
+    "accent_soft": "rgba(15,108,189,0.12)", "accent_text": ACCENT_TEXT, "on_accent": "#ffffff",
+    "danger": BAD, "danger_soft": "rgba(197,15,31,0.10)", "success": GOOD, "success_strong": GOOD,
+    "success_hover": "#0e700e", "warning": WARN, "warning_soft": "rgba(188,75,9,0.12)",
+})
+tk.STATUS.update({"proposed": "#9e9e9e", "active": ACCENT, "done": GOOD, "changed": "#f7630c",
+                  "blocked": BAD, "archived": "#d1d1d1"})
+tk.ACCENT = ACCENT
+tk.set_mode("light")
+_CONTROL = {"control": "#ebebeb", "control_hover": "#e0e0e0", "control_press": "#d6d6d6"}
+
+
+class _Notifier(QObject):
+    changed = Signal(str)            # emitted on a light/dark switch (this app stays light)
+
+
+signals = _Notifier()
+
+
+def c(name: str) -> str:
+    return _CONTROL[name] if name in _CONTROL else tk.c(name)
+
+
+def qcolor(name: str) -> QColor:
+    v = c(name)
+    if v.startswith("rgba("):
+        r, g, b, a = [x.strip() for x in v[5:-1].split(",")]
+        col = QColor(int(r), int(g), int(b))
+        col.setAlphaF(float(a))
+        return col
+    return QColor(v)
+
+
+def font(kind: str = "body") -> QFont:
+    px, weight = tk.TYPE[kind]
+    f = QFont()
+    f.setFamilies(["Segoe UI Variable Text", "Segoe UI"])
+    f.setPixelSize(px)
+    f.setWeight(QFont.Weight(weight))
+    return f
+
+
 def apply(app: QApplication) -> None:
     app.setStyle("Fusion")
     pal = QPalette()
