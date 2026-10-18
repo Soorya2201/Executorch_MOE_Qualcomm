@@ -12,7 +12,7 @@ from .models.asr import BaseASR, NoASR, make_asr
 from .models.llm import BaseLLM, HeuristicLLM, make_llm
 from .pipeline.session import SessionManager
 from .ui.common import dot_icon
-from .ui.control_window import ControlWindow
+from .ui.recorder_pill import RecorderPill
 from .ui import theme
 from .ui.main_window import MainWindow
 from .workspace.paths import Layout
@@ -27,7 +27,7 @@ class Ctx:
     asr: BaseASR
     llm: BaseLLM
     sm: SessionManager
-    control: ControlWindow | None = None
+    control: RecorderPill | None = None
     notes: list[str] = field(default_factory=list)
     llm_problem: str = ""
 
@@ -73,14 +73,12 @@ def main() -> int:
             tray.showMessage(title, msg, QSystemTrayIcon.Information, 6000)
 
     win = MainWindow(ctx, notify)
-    ctx.control = ControlWindow(ctx)
-    ctx.control.open_app.connect(lambda: (win.show(), win.raise_(), win.activateWindow()))
-    ctx.control.stopped.connect(lambda sid: (win.select_session(sid), win.process(sid)))
+    ctx.control = RecorderPill(ctx)
+    ctx.control.finished.connect(win.on_recording_finished)
     tray.messageClicked.connect(lambda: (win.show(), win.raise_(), win.activateWindow()))
 
     menu = QMenu()
-    for text, fn in (("Meeting control", lambda: (ctx.control.refresh() if not ctx.control.recording else None,
-                                                   ctx.control.show(), ctx.control.raise_())),
+    for text, fn in (("Record", lambda: (win.showNormal(), win.open_recorder())),
                      ("Stop recording", lambda: ctx.control.stop()),
                      ("Open app", lambda: (win.show(), win.raise_())),
                      ("Quit", lambda: quit_app())):

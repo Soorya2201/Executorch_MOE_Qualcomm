@@ -12,7 +12,7 @@ llm:
   ollama:
     url: http://127.0.0.1:11434
     model: qwen2.5:3b-instruct   # bigger/better: qwen2.5:7b-instruct (needs ~6 GB RAM)
-    timeout_s: 300
+    timeout_s: 600              # richer feature notes take longer on a CPU
     num_ctx: 8192               # context window; Ollama's small default would cut long transcripts
   executorch_runner:
     # Filled in on the Snapdragon laptop after the model gate. Example shape only:
@@ -28,7 +28,7 @@ asr:
   # none               = no speech recognition; import or type transcripts
   # faster_whisper     = local Whisper on CPU (dev laptop)
   # executorch_runner  = ExecuTorch ASR runner (Snapdragon NPU path)
-  backend: none
+  backend: faster_whisper      # needs: pip install -r requirements-asr.txt
   label: ""
   faster_whisper:
     model: base.en              # tiny.en | base.en | small.en ...
@@ -45,3 +45,6 @@ audio:
   samplerate: 16000
   keep_audio_after_commit: false   # true = move WAVs into the project's audio/ folder instead of deleting
   max_minutes: 60
+  save_transcripts_to: tests/fixtures   # recorded meetings' transcripts are also saved here ("" = off)
+  live_batch_s: 30              # while recording, add new transcript lines every N seconds
+  live_notes_every_s: 120       # ...and make notes for every N seconds of new transcript (0 = only after Stop)

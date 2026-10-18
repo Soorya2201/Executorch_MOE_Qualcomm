@@ -10,7 +10,8 @@ import json
 import re
 
 from ..workspace.store import Store
-from .transcript import norm
+from .extract import merge_relations
+from .transcript import excerpts_for, norm
 
 SYNONYMS = [
     (r"\b(sign in|signin|sign on|log in|logon|authentication|auth)\b", "login"),
@@ -61,7 +62,13 @@ def _card_from_existing(card: dict, f: dict, titles: dict[str, str]) -> dict:
         desc = f"{old_desc.rstrip('.')}. Update: {new_desc}"
     else:
         desc = old_desc
+    old_rels = [{"to": titles.get(r.get("to"), r.get("to_title") or r.get("to", "")), "type": r.get("type", "related"),
+                 "why": r.get("why", "")} for r in f.get("relations") or []]
+    old_kp = list(f.get("key_points") or [])
+    kp = old_kp + [k for k in card.get("key_points") or [] if norm(k) not in {norm(x) for x in old_kp}]
     card.update({
+        "key_points": kp,
+        "relations": merge_relations(old_rels, card.get("relations") or []),
         "feature_id": f["id"],
         "title": f["title"],
         "description": desc,
@@ -153,6 +160,16 @@ def _fix_dependencies(cards: list[dict], existing: list[dict], segments: list[di
                 "“Edit details” only if it is really needed.")
 
 
+def sync_relations(card: dict) -> None:
+    """'Needs first' (depends_on) is the source of truth for dependencies: drop 'needs' connections that are
+    no longer in it and add an entry (without a reason yet) for each dependency that has none."""
+    deps = {norm(d): d for d in card.get("depends_on") or []}
+    rels = [r for r in card.get("relations") or [] if r.get("type") != "needs" or norm(r.get("to", "")) in deps]
+    have = {norm(r["to"]) for r in rels if r.get("type") == "needs"}
+    rels += [{"to": d, "type": "needs", "why": ""} for k, d in deps.items() if k not in have]
+    card["relations"] = rels
+
+
 def _cycle(graph: dict[str, list[str]]) -> list[str] | None:
     seen, stack = {}, []
 
@@ -197,6 +214,8 @@ def build_proposal(store: Store, project_id: str | None, project_name: str, draf
             "impact": m.get("impact", ""), "uncertainty": m.get("uncertainty", ""),
             "evidence": m.get("evidence", []), "candidates": [], "flags": [], "user_edited": False,
             "said_as": m["title"], "mention": json.loads(json.dumps(m)),
+            "key_points": list(m.get("key_points", [])), "relations": [dict(r) for r in m.get("relations", [])],
+            "excerpts": excerpts_for(m, segments or [], [r["to"] for r in m.get("relations", [])]),
         }
         pool = active if m["action"] != "archive" else active
         cands = candidates(m["title"], pool)
@@ -230,6 +249,8 @@ def build_proposal(store: Store, project_id: str | None, project_name: str, draf
         cards.append(card)
 
     _fix_dependencies(cards, existing, segments or [])
+    for c in cards:
+        sync_relations(c)
     meeting = {
         "title": draft.get("title") or "Meeting", "date": date, "participants": participants or [],
         "summary": draft.get("summary", ""),

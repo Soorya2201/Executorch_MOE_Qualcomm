@@ -16,20 +16,20 @@ DEFAULTS: dict[str, Any] = {
         "backend": "ollama",
         "label": "",  # shown in the UI; empty = backend default
         "max_transcript_chars_per_chunk": 6000,
-        "ollama": {"url": "http://127.0.0.1:11434", "model": "qwen2.5:3b-instruct", "timeout_s": 300,
+        "ollama": {"url": "http://127.0.0.1:11434", "model": "qwen2.5:3b-instruct", "timeout_s": 600,
                    "num_ctx": 8192},
         "executorch_runner": {
             # Filled in on the Snapdragon laptop after the model gate.
             # Placeholders: {prompt_file} {prompt} {output_file}
             "command": [],
             "cwd": "",
-            "timeout_s": 300,
+            "timeout_s": 600,
             "verified_on_npu": False,
         },
     },
     "asr": {
         # none | faster_whisper | executorch_runner
-        "backend": "none",
+        "backend": "faster_whisper",
         "label": "",
         "faster_whisper": {"model": "base.en", "compute_type": "int8", "device": "cpu"},
         "executorch_runner": {
@@ -40,7 +40,8 @@ DEFAULTS: dict[str, Any] = {
             "verified_on_npu": False,
         },
     },
-    "audio": {"samplerate": 16000, "keep_audio_after_commit": False, "max_minutes": 60},
+    "audio": {"samplerate": 16000, "keep_audio_after_commit": False, "max_minutes": 60,
+              "save_transcripts_to": "tests/fixtures", "live_batch_s": 30, "live_notes_every_s": 120},
 }
 
 

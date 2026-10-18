@@ -141,18 +141,73 @@ def _normalize_draft(d: dict) -> dict:
         if not isinstance(f, dict) or not _s(f.get("title")):
             continue
         action = _s(f.get("action")).lower()
+        title = _s(f["title"])
+        rels = normalize_relations(f.get("relations"), title)
+        deps = [_s(x) for x in _as_list(f.get("depends_on")) if _s(x)]
+        # "needs" relations ARE the dependencies; keep both views in step
+        for r in rels:
+            if r["type"] == "needs" and norm(r["to"]) not in {norm(x) for x in deps}:
+                deps.append(r["to"])
+        for x in deps:
+            if not any(r["type"] == "needs" and norm(r["to"]) == norm(x) for r in rels):
+                rels.append({"to": x, "type": "needs", "why": ""})
         out["feature_mentions"].append({
-            "title": _s(f["title"]),
+            "title": title,
             "action": action if action in ("add", "change", "archive") else "change",
             "description": _s(f.get("description")),
+            "key_points": _dedupe([_s(x) for x in _as_list(f.get("key_points")) if _s(x)]),
+            "relations": rels,
             "status": _s(f.get("status")).lower(),
             "subtasks": [_s(x) for x in _as_list(f.get("subtasks")) if _s(x)],
-            "depends_on": [_s(x) for x in _as_list(f.get("depends_on")) if _s(x)],
+            "depends_on": [x for x in deps if norm(x) != norm(title)],
             "impact": _s(f.get("impact")),
             "uncertainty": _s(f.get("uncertainty")),
             "evidence": [{"start": _num(e.get("start")), "end": _num(e.get("end")), "quote": _s(e.get("quote"))}
                          for e in _as_list(f.get("evidence")) if isinstance(e, dict)],
         })
+    return out
+
+
+RELATION_TYPES = ("needs", "part of", "produces", "controls", "uses", "related")
+
+
+def _dedupe(xs: list[str]) -> list[str]:
+    out, seen = [], set()
+    for x in xs:
+        if norm(x) and norm(x) not in seen:
+            seen.add(norm(x))
+            out.append(x)
+    return out
+
+
+def normalize_relations(raw, owner_title: str = "") -> list[dict]:
+    """[{to, type, why}] with known types, no self-links, one entry per (type, to)."""
+    out, seen = [], set()
+    for r in _as_list(raw):
+        if not isinstance(r, dict) or not _s(r.get("to")):
+            continue
+        to = _s(r["to"])
+        typ = _s(r.get("type")).lower().replace("_", " ")
+        typ = {"depends on": "needs", "requires": "needs", "need": "needs", "part": "part of",
+               "produce": "produces", "control": "controls", "use": "uses"}.get(typ, typ)
+        if typ not in RELATION_TYPES:
+            typ = "related"
+        if norm(to) == norm(owner_title) or (typ, norm(to)) in seen:
+            continue
+        seen.add((typ, norm(to)))
+        out.append({"to": to, "type": typ, "why": _s(r.get("why"))})
+    return out
+
+
+def merge_relations(old: list[dict], new: list[dict]) -> list[dict]:
+    """Union by (type, to); a non-empty newer 'why' replaces an older one."""
+    out = [dict(r) for r in old or []]
+    for r in new or []:
+        hit = next((o for o in out if o["type"] == r["type"] and norm(o["to"]) == norm(r["to"])), None)
+        if hit is None:
+            out.append(dict(r))
+        elif r.get("why") and len(r["why"]) >= len(hit.get("why") or ""):
+            hit["why"] = r["why"]
     return out
 
 
@@ -174,6 +229,8 @@ def _merge_drafts(parts: list[dict]) -> dict:
                 if len(f[fld]) > len(g[fld]):
                     g[fld] = f[fld]
             g["subtasks"] += [s for s in f["subtasks"] if s not in g["subtasks"]]
+            g["key_points"] = _dedupe(g["key_points"] + f["key_points"])
+            g["relations"] = merge_relations(g["relations"], f["relations"])
             g["depends_on"] += [s for s in f["depends_on"] if s not in g["depends_on"]]
             g["evidence"] += f["evidence"]
             if f["action"] == "archive":
@@ -199,6 +256,57 @@ def check_evidence(draft: dict, segments: list[dict]) -> None:
                 e["start"], e["end"] = seg["start"], seg["end"]
 
 
+def extract_part(llm: BaseLLM, segments: list[dict], existing_titles: list[str],
+                 max_chars: int = 6000) -> list[dict]:
+    """Notes + features for one stretch of transcript (one part per chunk). Used for whole meetings and
+    for the live notes built while recording."""
+    if not segments:
+        return []
+    if llm.heuristic:
+        return [heuristic.extract(segments, "")]
+    feats = "\n".join(f"- {t}" for t in existing_titles) or "- (none yet)"
+    parts = []
+    try:
+        for chunk in chunk_lines(to_text(segments), max_chars):
+            # Two small requests instead of one big one: small models keep short replies intact.
+            raws: list[str] = []
+            try:
+                notes = _ask_json(llm, prompts.NOTES.format(transcript=chunk), 1200, prompts.NOTES_SCHEMA, raws)
+            except ExtractionError:
+                notes = {}
+            found = _ask_json(llm, prompts.FEATURES.format(features=feats, transcript=chunk), 3500,
+                              prompts.FEATURES_SCHEMA, raws)
+            parts.append(_normalize_draft({**notes, "feature_mentions": found.get("feature_mentions", [])}))
+    except LLMError as e:
+        raise ExtractionError(str(e)) from e
+    return parts
+
+
+def combine_parts(llm: BaseLLM, parts: list[dict], segments: list[dict], title: str) -> dict:
+    """Merge parts into one draft, write one overall summary, and check every quote against the transcript."""
+    if not parts:
+        raise ExtractionError("No notes could be made from this transcript.")
+    draft = _merge_drafts(parts)
+    if llm.heuristic:
+        names = ", ".join(f["title"] for f in draft["feature_mentions"]) or "no features"
+        draft["summary"] = (f"Discussed {names}. {len(draft['decisions'])} decision(s), "
+                            f"{len(draft['action_items'])} action item(s), {len(draft['open_questions'])} open "
+                            "question(s). (Rule-based summary: set an LLM backend for richer summaries.)")
+    elif len(parts) > 1:
+        joined = "\n\n".join(f"Part {i + 1}: {p['summary']}" for i, p in enumerate(parts) if p["summary"])
+        try:
+            draft["summary"] = _s(_ask_json(llm, prompts.MERGE_SUMMARY.format(parts=joined), 400,
+                                            prompts.SUMMARY_SCHEMA).get("summary")) \
+                or " ".join(p["summary"] for p in parts)
+        except (ExtractionError, LLMError):
+            draft["summary"] = " ".join(p["summary"] for p in parts)
+    else:
+        draft["summary"] = parts[0]["summary"]
+    draft["title"] = title
+    check_evidence(draft, segments)
+    return draft
+
+
 def extract_draft(llm: BaseLLM, segments: list[dict], title: str, existing_titles: list[str],
                   max_chars: int = 6000) -> dict:
     if not segments:
@@ -207,33 +315,4 @@ def extract_draft(llm: BaseLLM, segments: list[dict], title: str, existing_title
         draft = heuristic.extract(segments, title)
         check_evidence(draft, segments)
         return draft
-    text = to_text(segments)
-    feats = "\n".join(f"- {t}" for t in existing_titles) or "- (none yet)"
-    parts = []
-    try:
-        for chunk in chunk_lines(text, max_chars):
-            # Two small requests instead of one big one: small models keep short replies intact.
-            raws: list[str] = []
-            try:
-                notes = _ask_json(llm, prompts.NOTES.format(transcript=chunk), 1200, prompts.NOTES_SCHEMA, raws)
-            except ExtractionError:
-                notes = {}
-            found = _ask_json(llm, prompts.FEATURES.format(features=feats, transcript=chunk), 2500,
-                              prompts.FEATURES_SCHEMA, raws)
-            parts.append(_normalize_draft({**notes, "feature_mentions": found.get("feature_mentions", [])}))
-        draft = _merge_drafts(parts)
-        if len(parts) > 1:
-            joined = "\n\n".join(f"Part {i + 1}: {p['summary']}" for i, p in enumerate(parts))
-            try:
-                draft["summary"] = _s(_ask_json(llm, prompts.MERGE_SUMMARY.format(parts=joined), 400,
-                                                prompts.SUMMARY_SCHEMA).get("summary")) \
-                    or " ".join(p["summary"] for p in parts)
-            except ExtractionError:
-                draft["summary"] = " ".join(p["summary"] for p in parts)
-        else:
-            draft["summary"] = parts[0]["summary"]
-    except LLMError as e:
-        raise ExtractionError(str(e)) from e
-    draft["title"] = title
-    check_evidence(draft, segments)
-    return draft
+    return combine_parts(llm, extract_part(llm, segments, existing_titles, max_chars), segments, title)

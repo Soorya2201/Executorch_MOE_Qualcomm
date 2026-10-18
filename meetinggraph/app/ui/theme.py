@@ -22,6 +22,8 @@ QPushButton#primary:disabled, QPushButton#good:disabled {{ background: #c9d1d9; 
 QTextBrowser {{ background: white; }}
 QPushButton#good {{ background: {GOOD}; color: white; border: 1px solid {GOOD}; font-weight: 600; }}
 QPushButton#danger {{ color: {BAD}; }}
+QPushButton#record {{ background: #e5484d; color: white; border: 1px solid #e5484d; font-weight: 600; }}
+QPushButton#record:hover {{ background: #f2555a; }}
 QPushButton#link {{ border: none; background: transparent; color: {ACCENT}; padding: 2px 4px; text-align: left; }}
 QFrame#banner {{ background: #ddf4ff; border: 1px solid #9cd1f7; border-radius: 8px; }}
 QFrame#bannerWarn {{ background: {WARN_BG}; border: 1px solid {WARN_BORDER}; border-radius: 8px; }}

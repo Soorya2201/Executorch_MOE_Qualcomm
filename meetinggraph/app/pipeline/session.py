@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import threading
 import time
@@ -37,6 +38,7 @@ class SessionManager:
         self.cfg, self.layout, self.store, self.asr, self.llm = cfg, layout, store, asr, llm
         self.txns = Transactions(layout)
         self._lock = threading.RLock()
+        self.live: dict = {}                     # session id -> LiveSession (while recording)
 
     # ---------- basic IO ----------
     def _dir(self, sid: str) -> Path:
@@ -133,6 +135,92 @@ class SessionManager:
         note = "; ".join(health)
         return self._set(sid, stage="recorded", audio=audio, offsets=offsets, note=note)
 
+    # ---------- live transcript while recording ----------
+    def start_live(self, sid: str, recorder, threads: bool = True) -> object | None:
+        """Start writing the transcript (and notes) while recording. Returns None if speech recognition
+        is not available; the recording then works as before (transcribed after Stop)."""
+        if not getattr(self.asr, "available", False):
+            return None
+        from .live import LiveSession
+        s = self.load(sid)
+        pid = s.get("project_id")
+        existing = [f["title"] for f in self.store.features(pid)
+                    if f.get("status") != "archived"] if pid and self.store.project(pid) else []
+        a = self.cfg["audio"]
+        self._file(sid, "transcript.txt").write_text("", encoding="utf-8")
+        path = self._export_path(s)
+        if path:
+            path.write_text(self._export_header(s), encoding="utf-8")
+        self._set(sid, live=True, saved_transcript=str(path or ""))
+        live = LiveSession(self, sid, recorder, float(a.get("live_batch_s", 30)),
+                           float(a.get("live_notes_every_s", 120)), existing, threads=threads)
+        self.live[sid] = live
+        return live
+
+    def append_live_transcript(self, sid: str, text: str) -> None:
+        with self._lock:
+            with open(self._file(sid, "transcript.txt"), "a", encoding="utf-8") as f:
+                f.write(text)
+            p = self.load(sid).get("saved_transcript")
+            if p:
+                with open(p, "a", encoding="utf-8") as f:
+                    f.write(text)
+
+    def live_progress(self, sid: str, stats: dict) -> None:
+        """Record live progress in session.json (the main window refreshes when it changes)."""
+        try:
+            self._set(sid, live_stats={k: stats.get(k) for k in ("lines", "audio_s", "notes_done", "notes_waiting")})
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    def stop_live(self, sid: str) -> None:
+        """Recording discarded: stop the live workers and remove the live transcript copy."""
+        live = self.live.pop(sid, None)
+        if live:
+            live.abort()
+        try:
+            p = self.load(sid).get("saved_transcript")
+            if p:
+                Path(p).unlink(missing_ok=True)
+        except (OSError, json.JSONDecodeError, FileNotFoundError):
+            pass
+
+    def finish_live(self, sid: str) -> dict:
+        """After Stop: transcribe the last seconds, finish the notes, build the proposal."""
+        live = self.live.pop(sid)
+        s = self._set(sid, stage="transcribing", error="")
+        t0 = time.perf_counter()
+        try:
+            segs, parts = live.finish()
+        except Exception as e:  # notes could not be finished; the transcript is complete if live.error is empty
+            if not live.error and live.segments:
+                return self._set(sid, stage="failed", live_transcript_ok=True,
+                                 error=f"The transcript is ready, but the notes failed: {e}. Click “Try again”.")
+            segs, parts = [], []
+        if live.error or not segs:
+            # live transcript broke (or heard nothing): fall back to transcribing the full recording
+            self._set(sid, stage="recorded", note=live.error)
+            s = self.transcribe(sid)
+            return s if s["stage"] != "transcribed" else self.extract(sid)
+        self._file(sid, "transcript.txt").write_text(to_text(segs), encoding="utf-8")
+        saved = self.export_transcript(sid)
+        s = self._set(sid, stage="summarizing", saved_transcript=saved, live_transcript_ok=True)
+        try:
+            pid = s.get("project_id")
+            pid = pid if pid and self.store.project(pid) else None
+            draft = ex.combine_parts(self.llm, parts, segs, s["title"]) if parts else \
+                ex.extract_draft(self.llm, segs, s["title"], live.existing)
+            self._file(sid, "draft.json").write_text(json.dumps(draft, indent=2), encoding="utf-8")
+            proposal = build_proposal(self.store, pid, s["project_name"], draft, sid, s["date"], segments=segs)
+            self._file(sid, "proposal.json").write_text(json.dumps(proposal, indent=2), encoding="utf-8")
+            timings = dict(s.get("timings") or {}, after_stop_s=round(time.perf_counter() - t0, 2),
+                           live_parts=len(parts))
+            return self._set(sid, stage="ready", timings=timings,
+                             labels=dict(s["labels"], llm=self.llm.label, asr=self.asr.label))
+        except Exception as e:
+            return self._set(sid, stage="failed", error=f"The transcript is ready, but the notes failed: {e}. "
+                                                        "Click “Try again”.")
+
     # ---------- transcript ----------
     def transcript(self, sid: str) -> str:
         p = self._file(sid, "transcript.txt")
@@ -168,9 +256,39 @@ class SessionManager:
                 raise SessionError("No speech was recognized. Check levels, or type the transcript manually.")
             self._file(sid, "transcript.txt").write_text(to_text(segs), encoding="utf-8")
             timings = dict(s.get("timings") or {}, transcribe_s=round(time.perf_counter() - t0, 2))
-            return self._set(sid, stage="transcribed", timings=timings, labels=dict(s["labels"], asr=self.asr.label))
+            saved = self.export_transcript(sid) if s.get("source") == "recording" else ""
+            return self._set(sid, stage="transcribed", timings=timings, labels=dict(s["labels"], asr=self.asr.label),
+                             saved_transcript=saved)
         except Exception as e:  # surfaced in the Inbox with Retry
             return self._set(sid, stage="failed", error=f"Transcription failed: {e}")
+
+    def export_transcript(self, sid: str) -> str:
+        """Save a copy of a recorded meeting's transcript next to the test transcripts
+        (audio.save_transcripts_to, default tests/fixtures). Returns the file path, or "" if disabled."""
+        s = self.load(sid)
+        path = self._export_path(s)
+        if not path:
+            return ""
+        path.write_text(self._export_header(s) + self.transcript(sid), encoding="utf-8")
+        return str(path)
+
+    def _export_path(self, s: dict) -> Path | None:
+        from ..config import ROOT
+        folder = self.cfg["audio"].get("save_transcripts_to", "tests/fixtures")
+        if not folder:
+            return None
+        d = Path(folder)
+        if not d.is_absolute():
+            d = ROOT / d
+        d.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r"[^A-Za-z0-9]+", "_", f"{s.get('project_name', '')}_{s.get('title', '')}").strip("_")[:60]
+        stamp = s.get("created_at", now_iso())[:16].replace(":", "").replace("T", "_")
+        return d / f"rec_{stamp}_{slug or 'meeting'}.txt"
+
+    @staticmethod
+    def _export_header(s: dict) -> str:
+        return (f"# Recorded meeting. Project: {s.get('project_name', '')}. Title: {s.get('title', '')}. "
+                f"Date: {s.get('date', '')}\n")
 
     # ---------- extraction ----------
     def extract(self, sid: str) -> dict:
@@ -314,7 +432,8 @@ class SessionManager:
                 notes.append(f"Session '{s['title']}' was already saved; cleanup {'done' if r['ok'] else 'failed'}.")
                 continue
             if stage == "recording":
-                self._set(sid, stage="recorded", note="App closed while recording; partial audio kept.")
+                self._set(sid, stage="recorded", live=False,
+                          note="App closed while recording; partial audio kept.")
             elif stage in ACTIVE_STAGES:
                 back = "ready" if stage == "saving" and self._file(sid, "proposal.json").exists() else "failed"
                 self._set(sid, stage=back, error="Interrupted when the app closed. Retry from here.")

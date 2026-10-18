@@ -91,16 +91,27 @@ def list_devices() -> dict:
 
 
 class _Track(threading.Thread):
-    def __init__(self, name: str, device_id: str, loopback: bool, path: Path, t0: float, stop: threading.Event):
+    def __init__(self, name: str, device_id: str, loopback: bool, path: Path, t0: float, stop: threading.Event,
+                 paused: threading.Event | None = None):
         super().__init__(daemon=True, name=f"rec-{name}")
         self.track, self.device_id, self.loopback = name, device_id, loopback
         self.path, self.t0, self.stop_evt = path, t0, stop
+        self.paused = paused or threading.Event()
         self.opened = threading.Event()
         self.level = 0.0
         self.offset: float | None = None
         self.error = ""
         self.frames = 0
         self.silent_since: float | None = None
+        self._live: list = []                 # 16 kHz float32 blocks not yet taken by the live transcriber
+        self._live_lock = threading.Lock()
+
+    def drain(self):
+        """Return (and forget) the 16 kHz mono float32 audio recorded since the last call."""
+        np, _ = _libs()
+        with self._live_lock:
+            blocks, self._live = self._live, []
+        return np.concatenate(blocks).astype(np.float32) if blocks else np.zeros(0, dtype=np.float32)
 
     def run(self):
         try:
@@ -116,6 +127,10 @@ class _Track(threading.Thread):
                     self.opened.set()
                     while not self.stop_evt.is_set():
                         data = rec.record(numframes=BLOCK)
+                        if self.paused.is_set():       # keep draining the device, but write nothing
+                            self.level = 0.0
+                            self.silent_since = None
+                            continue
                         if self.offset is None:
                             self.offset = time.monotonic() - self.t0
                         mono = data.mean(axis=1) if data.ndim > 1 else data
@@ -131,6 +146,8 @@ class _Track(threading.Thread):
                         pcm = (np.clip(down, -1, 1) * 32767).astype("<i2").tobytes()
                         w.writeframes(pcm)
                         self.frames += len(down)
+                        with self._live_lock:
+                            self._live.append(np.clip(down, -1, 1).astype(np.float32))
         except Exception as e:
             self.error = f"{self.track}: {e}"
         finally:
@@ -145,8 +162,11 @@ class DualRecorder:
         self.mic_id, self.speaker_id = mic_id, speaker_id
         self.mic_path, self.loop_path = mic_path, loop_path
         self._stop = threading.Event()
+        self._paused = threading.Event()
         self.tracks: dict[str, _Track] = {}
         self.started_at = 0.0
+        self._paused_total = 0.0
+        self._paused_at: float | None = None
 
     def start(self) -> list[str]:
         """Start both tracks. Returns warnings (e.g. loopback unavailable)."""
@@ -154,9 +174,9 @@ class DualRecorder:
         t0 = time.monotonic()
         self.started_at = t0
         if self.mic_id is not None:
-            self.tracks["mic"] = _Track("mic", self.mic_id, False, self.mic_path, t0, self._stop)
+            self.tracks["mic"] = _Track("mic", self.mic_id, False, self.mic_path, t0, self._stop, self._paused)
         if self.speaker_id is not None:
-            self.tracks["loopback"] = _Track("loopback", self.speaker_id, True, self.loop_path, t0, self._stop)
+            self.tracks["loopback"] = _Track("loopback", self.speaker_id, True, self.loop_path, t0, self._stop, self._paused)
         if not self.tracks:
             raise RuntimeError("Choose a microphone and/or an output device first.")
         for t in self.tracks.values():
@@ -187,8 +207,27 @@ class DualRecorder:
                 out.append(f"{k}: silent for {int(t.silent_for())} s (muted or wrong device?)")
         return out
 
+    @property
+    def is_paused(self) -> bool:
+        return self._paused.is_set()
+
+    def pause(self) -> None:
+        if not self._paused.is_set():
+            self._paused_at = time.monotonic()
+            self._paused.set()
+
+    def resume(self) -> None:
+        if self._paused.is_set():
+            self._paused_total += time.monotonic() - (self._paused_at or time.monotonic())
+            self._paused_at = None
+            self._paused.clear()
+
     def elapsed(self) -> float:
-        return time.monotonic() - self.started_at if self.started_at else 0.0
+        """Recorded time, not counting pauses."""
+        if not self.started_at:
+            return 0.0
+        paused = self._paused_total + (time.monotonic() - self._paused_at if self._paused_at else 0.0)
+        return time.monotonic() - self.started_at - paused
 
     def stop(self) -> tuple[dict[str, float], list[str]]:
         """Stop and return (offsets in seconds per track, health notes)."""

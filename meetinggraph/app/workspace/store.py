@@ -25,6 +25,7 @@ from approved meeting summaries.
    Rejection discards the proposal and leaves the project untouched.
 3. Delete the transcript and temporary audio only after the approved commit is
    written, reopened and logged. Never report deletion that did not happen.
+   Only the transcript lines shown on an approved change are kept, as evidence.
 4. Never hard-delete. "Delete" = status: archived + tombstone + log entry.
 5. Feature and meeting IDs are UUIDs: permanent, never reused.
 6. Never merge features by title alone; offer candidates for the user to confirm.
@@ -70,12 +71,28 @@ def parse_front_matter(text: str) -> tuple[dict[str, Any], str]:
 
 # ---------- renderers (shared by commit builder and tests) ----------
 
+RELATION_LABEL = {"needs": "needs", "part of": "is part of", "produces": "produces", "controls": "controls",
+                  "uses": "uses", "related": "is related to"}
+
+
+def relation_line(owner: str, r: dict, titles: dict[str, str], link: bool = True) -> str:
+    to = r.get("to") or ""
+    name = titles.get(to) or r.get("to_title") or to
+    target = f"[[{to}|{name}]]" if (link and to in titles) else name
+    why = (r.get("why") or "").strip()
+    return f"{owner} {RELATION_LABEL.get(r.get('type'), r.get('type', 'is related to'))} {target}" + \
+        (f" — why: {why}" if why else " — why: not explained in the meeting")
+
+
 def render_feature(meta: dict[str, Any], titles: dict[str, str], meeting_titles: dict[str, str],
                    history: list[str]) -> str:
     lines = [f"# {meta['title']}", ""]
     if meta.get("status") == "archived":
         lines += ["> **Archived (tombstone).** Kept for history; not part of current scope.", ""]
-    lines += ["## What it does", meta.get("description") or "unknown", ""]
+    lines += ["## What it is", meta.get("description") or "unknown", ""]
+    kp = meta.get("key_points") or []
+    if kp:
+        lines += ["## Key points"] + [f"- {k}" for k in kp] + [""]
     lines += ["## Subtasks"]
     subs = meta.get("subtasks") or []
     if subs:
@@ -86,12 +103,25 @@ def render_feature(meta: dict[str, Any], titles: dict[str, str], meeting_titles:
         lines.append("- none recorded")
     lines += ["", "## Dependencies"]
     deps = meta.get("depends_on") or []
+    rels = meta.get("relations") or []
     if deps:
         for d in deps:
-            lines.append(f"- [[{d}|{titles.get(d, d)}]]")
+            why = next((r.get("why") for r in rels if r.get("type") == "needs" and r.get("to") == d), "")
+            lines.append(f"- [[{d}|{titles.get(d, d)}]]" + (f" — why: {why}" if why else ""))
     else:
         lines.append("- none")
-    lines += ["", "## Impact", meta.get("impact") or "unknown", "", "## Source meetings"]
+    other = [r for r in rels if r.get("type") != "needs"]
+    if other:
+        lines += ["", "## Connections"] + [f"- {relation_line(meta['title'], r, titles)}" for r in other]
+    lines += ["", "## Impact", meta.get("impact") or "unknown"]
+    ex = meta.get("excerpts") or []
+    if ex:
+        lines += ["", "## What was said (transcript lines kept as evidence)"]
+        for e in ex:
+            sp = f" ({e['speaker']})" if e.get("speaker") else ""
+            src = meeting_titles.get(e.get("meeting", ""), "")
+            lines.append(f"- [{e.get('at', '')}]{sp} {e.get('text', '')}" + (f" _({src})_" if src else ""))
+    lines += ["", "## Source meetings"]
     for m in meta.get("source_meetings") or []:
         lines.append(f"- [[{m}|{meeting_titles.get(m, m)}]]")
     lines += ["", "## History"] + [f"- {h}" for h in history]

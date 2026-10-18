@@ -4,7 +4,7 @@ from __future__ import annotations
 from itertools import combinations
 from typing import Any
 
-from .store import Store
+from .store import RELATION_LABEL, Store
 
 
 def build_graph(store: Store, project_id: str) -> dict[str, Any]:
@@ -17,10 +17,21 @@ def build_graph(store: Store, project_id: str) -> dict[str, Any]:
               for m in meets]
     edges = []
     for f in feats:
+        rels = f.get("relations") or []
         for d in f.get("depends_on") or []:
             if d in titles:
-                edges.append({"src": f["id"], "dst": d, "type": "feature_depends_on_feature",
-                              "reason": f"'{f['title']}' lists '{titles[d]}' in depends_on ({f['_path']})"})
+                why = next((r.get("why") for r in rels if r.get("type") == "needs" and r.get("to") == d), "")
+                edges.append({"src": f["id"], "dst": d, "type": "feature_depends_on_feature", "why": why or "",
+                              "reason": f"'{f['title']}' needs '{titles[d]}' first."
+                                        + (f" Why: {why}" if why else " (No reason was given in the meeting.)")})
+        for r in rels:
+            if r.get("type") == "needs" or r.get("to") not in titles or r.get("to") == f["id"]:
+                continue
+            verb = RELATION_LABEL.get(r.get("type"), "is related to")
+            why = r.get("why") or ""
+            edges.append({"src": f["id"], "dst": r["to"], "type": "feature_relates_to_feature", "verb": verb,
+                          "why": why, "reason": f"'{f['title']}' {verb} '{titles[r['to']]}'."
+                                                + (f" Why: {why}" if why else "")})
     touched_by: dict[str, set[str]] = {}
     for m in meets:
         for ref in m.get("feature_refs") or []:

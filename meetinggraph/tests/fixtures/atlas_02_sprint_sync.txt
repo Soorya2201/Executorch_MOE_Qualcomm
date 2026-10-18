@@ -9,3 +9,4 @@
 [00:01:00-00:01:08] (remote) Impact of Offline sync: export must read from the local store.
 [00:01:08-00:01:15] (remote) Decision: ship the beta without search.
 [00:01:15-00:01:22] (you) Action item: Arjun to write conflict tests.
+[00:01:22-00:01:30] (remote) Thanks everyone, see you all next week.

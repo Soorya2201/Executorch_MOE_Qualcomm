@@ -161,7 +161,7 @@ def test_archiving_depended_on_feature_needs_policy(env):
     prop["archive_policy"] = "mark_blocked"
     plan = build_commit(store, prop)
     assert plan.ok, plan.errors
-    export_rel = next(r for r, c in plan.files.items() if "Export to PDF" in c and r.startswith("features/"))
+    export_rel = next(r for r, c in plan.files.items() if "title: Export to PDF" in c and r.startswith("features/"))
     assert "status: blocked" in plan.files[export_rel]
 
 
@@ -179,7 +179,9 @@ def test_stale_proposal_rejected(env):
 def test_transcript_deleted_after_commit(env):
     cfg, layout, store, sm = env
     two_meetings(sm, store)
-    phrase = "Quick sprint sync on Atlas"   # appears only in the transcript
+    # Only the transcript lines kept as evidence on approved features survive; a line that is
+    # not about any feature (small talk) must be gone with the transcript.
+    phrase = "see you all next week"
     for p in layout.root.rglob("*"):
         if p.is_file():
             assert phrase not in p.read_text(encoding="utf-8", errors="ignore"), p
@@ -251,3 +253,30 @@ def test_explicit_project_then_first_meeting(env):
     assert r["ok"] and r["project_id"] == p["id"]
     assert store.project(p["id"])["revision"] == 1
     assert "project created" in store.master_log(p["id"])
+
+
+def test_recorded_meeting_transcript_is_saved_to_folder(env, tmp_path):
+    from app.models.asr import BaseASR
+
+    class FakeASR(BaseASR):
+        name = "fake"
+
+        def transcribe(self, path):
+            who = "mic" if "mic" in path else "remote"
+            return [{"start": 1.0, "end": 4.0, "text": f"hello from {who}", "confidence": 0.9}]
+
+    cfg, layout, store, sm = env
+    cfg["audio"]["save_transcripts_to"] = str(tmp_path / "fixtures")
+    sm.asr = FakeASR()
+    p = sm.create_project("Atlas")
+    s = sm.create("recording", p["id"], "Atlas", "Standup")
+    mic, loop = sm.recording_paths(s["id"])
+    mic.write_bytes(b"x")
+    loop.write_bytes(b"x")
+    sm.finish_recording(s["id"], {"mic": 0.0, "loopback": 0.2}, [])
+    s = sm.transcribe(s["id"])
+    assert s["stage"] == "transcribed", s.get("error")
+    saved = Path(s["saved_transcript"])
+    assert saved.parent == tmp_path / "fixtures" and saved.name.startswith("rec_")
+    text = saved.read_text(encoding="utf-8")
+    assert "hello from mic" in text and "hello from remote" in text and text.startswith("# Recorded meeting")

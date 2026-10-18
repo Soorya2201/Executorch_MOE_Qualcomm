@@ -48,7 +48,7 @@ pip install -r requirements.txt
 ## 3. Verify
 
 ```powershell
-python -m pytest -q             # expect: 17 passed
+python -m pytest -q             # expect: 37 passed
 python tools\check_env.py       # Python, PySide6, audio devices, backends, workspace
 ```
 
@@ -78,19 +78,58 @@ The bottom bar shows which AI model is in use. **Closing the window quits the ap
 
 The blue bar at the top always tells you what to do next. Follow it.
 
-1. Click **＋ Add a meeting** (top left).
+1. Click **＋ Add a transcript** (top left).
 2. Under **1. Which project?** choose **➕ Create a new project…** and type `Atlas`.
 3. Under **2. What is the meeting called?** type `Kickoff`.
-4. Under **3. How do you want to add it?** pick **Open a transcript file**, click **Choose file…**, and pick `tests\fixtures\atlas_01_kickoff.txt`. Click **Add meeting**.
-5. Wait a few seconds (with Qwen: up to a minute) until the blue bar says it's **ready**. Click **Review it**.
+4. Under **3. How do you want to add it?** pick **Open a transcript file**, click **Choose file…**, and pick `tests\fixtures\atlas_01_kickoff.txt`. Click **Add transcript**.
+5. Wait until the blue bar says it's **ready** (with Qwen: 30–90 s), then click **Review it**.
 6. **Step 1:** read the summary. **Step 2:** each white box is one change. Leave them ticked.
-7. **Step 3:** click the green **Save to project**, then **Save to project** again in the confirmation.
-8. Add the second meeting: **＋ Add a meeting** → project **Atlas** (already selected) → title `Sprint sync` → file `atlas_02_sprint_sync.txt`.
-9. In Step 2, one box has a **yellow question**: the meeting said “The sign-in flow”, is that your existing “User login”? Click **Yes**. Then **Save to project**.
-10. Explore: **Meetings**, **Features** (click *Offline sync*: see “Needs first” and “Needed by”), **Map** (click a line to see why it exists), and type a question in **Ask about Atlas** on the right.
-11. Try Qwen on natural speech: add `atlas_03_natural_design_review.txt` to Atlas. (The first two files use fixed phrasing so they also work without a model; this one needs Qwen.)
+7. **Step 3:** click the green **Save to project**, then confirm.
+8. Add `atlas_02_sprint_sync.txt` the same way (Atlas is preselected, title `Sprint sync`). Answer the yellow question with **Yes**, then **Save to project**.
+9. Explore **Meetings**, **Features**, **Map**, and ask a question on the right.
 
-**Speech recognition and live recording (optional):** `pip install -r requirements-asr.txt`, set `asr: backend: faster_whisper` in `config.yaml`, restart. Then **Add a meeting → Open an audio recording**, or **● Record a live meeting**.
+## 6b. Recording a meeting (microphone + computer sound)
+
+One-time setup for speech recognition (runs on the laptop, offline after the first download):
+
+```powershell
+pip install -r requirements-asr.txt
+python tools\setup_whisper.py      # downloads the Whisper model once (~150 MB)
+```
+
+Then:
+
+1. Click the red **● Record** button and pick the project and meeting name, then **Open recorder**.
+2. The app minimizes and a small oval recorder appears at the top of the screen (you can drag it).
+3. Press the red **●** to start. It records **your microphone and whatever the computer plays** (the other people in a Zoom/Teams call). **❚❚** pauses, **●** continues, **■** stops.
+4. **While you record**, the transcript is written as you go: every 30 seconds the new audio is turned into text and
+   added to the end of the transcript (like a log), and every ~2 minutes of new text is turned into notes. The
+   recorder shows how many lines are done (hover it to see the latest line). Open the app and click the meeting to
+   watch the transcript grow, or open the `rec_…txt` file in VS Code.
+5. **■ Stop**: the recorder closes, the app comes back, and only the last few seconds plus the last notes part are
+   left to do, so suggested changes appear under **To review** much sooner. Change the timings with
+   `audio: live_batch_s` and `live_notes_every_s` in `config.yaml`.
+6. **✕** always asks whether to save what was recorded so far: **Yes** = same as Stop, **No** = throw it away, **Keep recording** = carry on.
+7. A copy of every recorded transcript is saved in `tests\fixtures` as `rec_<date>_<project>_<meeting>.txt` (change or turn off with `audio: save_transcripts_to` in `config.yaml`). These files are in `.gitignore`, so your private meetings are never pushed to GitHub.
+
+Tip: tell people you're recording. Use headphones or speakers, both work: the app removes duplicate speech picked up twice.
+
+## 6c. Asking "why" and "how are these connected"
+
+For every feature (or concept, in a lecture) the app now saves, straight from the transcript:
+
+- **What it is**: 2–4 sentences, not a one-liner.
+- **Key points**: the specific facts that were said.
+- **How it connects (and why)**: e.g. *Protein synthesis needs Mitochondria — why: it needs a lot of ATP and
+  mitochondria supply it*. Kinds: needs, part of, produces, controls, uses, related. "needs" lines are the
+  dependencies.
+- **What was said**: the transcript lines about it (with times). Only these lines are kept after saving; the rest
+  of the transcript is still deleted.
+
+Ask things like *"Why does protein synthesis need mitochondria?"* or *"How are chloroplasts related to protein
+synthesis?"*. The app finds the features you named, looks up how they connect (directly, or through a chain of
+other features), and answers from those reasons and the saved lines, with sources. Try it with
+`tests\fixtures\biology_01_cell_lecture.txt`.
 
 ## 7. How the code is organised
 
@@ -113,7 +152,7 @@ app/
     query.py                 cited, project-scoped answers
   models/llm.py, asr.py      backends: heuristic | ollama | faster_whisper | executorch_runner
   capture/recorder.py        mic + loopback WAV tracks (soundcard / WASAPI)
-  ui/                        main window, add-meeting dialog, review cards, pages, map, recorder, theme
+  ui/                        main window, add-transcript dialog, oval recorder, review cards, pages, map, theme
 tests/                       pytest suite + fixture meetings
 tools/check_env.py           environment check
 ```

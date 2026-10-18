@@ -106,3 +106,44 @@ def quote_supported(quote: str, segments: list[dict]) -> dict | None:
             if score > best_score:
                 best, best_score = s, score
     return best if best_score >= 0.75 else None
+
+
+def _has_name(name: str, text_norm: str) -> bool:
+    """True if every word of the name (singular or plural) appears in the text."""
+    words = [w for w in norm(name).split() if len(w) > 2] or norm(name).split()
+    toks = set(text_norm.split())
+    toks |= {t[:-1] for t in toks if t.endswith("s")} | {t + "s" for t in toks}
+    return bool(words) and all(w in toks for w in words)
+
+
+def excerpts_for(item: dict, segments: list[dict], related_titles: list[str] | None = None,
+                 limit: int = 12) -> list[dict]:
+    """Transcript lines worth keeping with an item, so later 'why' questions can be answered from what was
+    actually said: its evidence lines (+ the line before/after), lines naming it together with an item it is
+    connected to, then other lines naming it. Returns [{"at", "speaker", "text"}] in transcript order."""
+    if not segments:
+        return []
+    texts = [norm(s["text"]) for s in segments]
+    picked: dict[int, int] = {}            # index -> priority (lower = more important)
+
+    def pick(i, prio):
+        if 0 <= i < len(segments):
+            picked[i] = min(prio, picked.get(i, 99))
+
+    for e in item.get("evidence") or []:
+        seg = quote_supported(e.get("quote", ""), segments)
+        if seg is not None:
+            i = segments.index(seg)
+            pick(i, 0)
+            pick(i - 1, 2)
+            pick(i + 1, 2)
+    title = item.get("title", "")
+    for i, t in enumerate(texts):
+        if _has_name(title, t):
+            both = any(_has_name(r, t) for r in related_titles or [])
+            pick(i, 1 if both else 3)
+            if both:
+                pick(i + 1, 2)
+    best = sorted(picked, key=lambda i: (picked[i], i))[:limit]
+    return [{"at": fmt_ts(segments[i]["start"]), "speaker": segments[i].get("speaker", ""),
+             "text": segments[i]["text"]} for i in sorted(best)]

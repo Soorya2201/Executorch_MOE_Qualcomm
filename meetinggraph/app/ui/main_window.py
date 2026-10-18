@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QFrame, QHBoxLayout, QInputDialog, QLabel, QLineE
 
 from ..pipeline.query import answer
 from ..workspace.graph import build_graph
-from .add_meeting import AddMeetingDialog
+from .add_meeting import AddMeetingDialog, RecordSetupDialog
 from .common import STAGE_COLOR, STAGE_TEXT, STATUS_COLOR, Job, dot_icon, esc
 from .graph_view import GraphView
 from .pages import feature_html, meeting_html
@@ -58,11 +58,14 @@ class MainWindow(QMainWindow):
         left = QWidget()
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 6, 0)
-        self.b_add = QPushButton("＋  Add a meeting")
+        self.b_add = QPushButton("＋  Add a transcript")
         self.b_add.setObjectName("primary")
         self.b_add.setMinimumHeight(40)
         ll.addWidget(self.b_add)
-        self.b_record = QPushButton("●  Record a live meeting")
+        self.b_record = QPushButton("●  Record")
+        self.b_record.setObjectName("record")
+        self.b_record.setMinimumHeight(40)
+        self.b_record.setToolTip("Record a meeting: your microphone + the computer's sound")
         ll.addWidget(self.b_record)
         lbl = QLabel("Projects")
         lbl.setObjectName("h2")
@@ -223,14 +226,14 @@ class MainWindow(QMainWindow):
                     "It will show up here when it's ready to review.")
             btn, act = "See progress", (lambda sid=s["id"]: self.select_session(sid))
         elif not projects:
-            text = ("<b>Start here:</b> click <b>＋ Add a meeting</b>. Create a project, then paste a conversation or "
-                    "open a transcript file. To try it, use <i>tests\\fixtures\\atlas_01_kickoff.txt</i>.")
-            btn, act = "Add a meeting", self.add_meeting
+            text = ("<b>Start here:</b> click <b>● Record</b> to record a meeting, or <b>＋ Add a transcript</b> to "
+                    "paste or open one. To try it, add <i>tests\\fixtures\\atlas_01_kickoff.txt</i>.")
+            btn, act = "Add a transcript", self.add_meeting
         else:
             name = next((p["name"] for p in projects if p["id"] == self.project_id), projects[0]["name"])
-            text = (f"<b>All caught up.</b> Add the next meeting for “{esc(name)}”, look through Meetings, "
+            text = (f"<b>All caught up.</b> Record or add the next meeting for “{esc(name)}”, look through Meetings, "
                     "Features and the Map, or ask a question on the right.")
-            btn, act = "Add a meeting", self.add_meeting
+            btn, act = "Add a transcript", self.add_meeting
         if llm_problem:
             text += f"<br><span style='color:#9a6700'>AI model not available: {esc(llm_problem)} " \
                     "Using simple rules until it is fixed.</span>"
@@ -286,7 +289,7 @@ class MainWindow(QMainWindow):
             if s["id"] == cur:
                 self.sessions.setCurrentItem(it)
         if not sessions:
-            it = QListWidgetItem("Nothing to review.\nUse “＋ Add a meeting”.")
+            it = QListWidgetItem("Nothing to review.\nUse “● Record” or\n“＋ Add a transcript”.")
             it.setFlags(Qt.NoItemFlags)
             self.sessions.addItem(it)
         self.sessions.blockSignals(False)
@@ -424,9 +427,6 @@ class MainWindow(QMainWindow):
     def handle_new_meeting(self, r: dict):
         self.refresh_projects(select=r["project_id"])
         pname = (self.ctx.store.project(r["project_id"]) or {}).get("name", "")
-        if r["mode"] == "record":
-            self.open_recorder(r["project_id"], r["title"])
-            return
         if r["mode"] in ("paste", "text_file"):
             s = self.ctx.sm.import_text(r["text"], r["project_id"], pname, r["title"])
             self.select_session(s["id"])
@@ -437,17 +437,51 @@ class MainWindow(QMainWindow):
             self.process(s["id"])
 
     def open_recorder(self, project_id: str | None = None, title: str | None = None):
-        c = self.ctx.control
-        if not c:
+        """● Record: pick project + title, minimize this window, show the floating recorder."""
+        pill = self.ctx.control
+        if pill is None:
             return
-        if not c.recording:
-            c.refresh()
-            if project_id or self.project_id:
-                c.select_project(project_id or self.project_id)
-            if title:
-                c.title.setText(title)
-        c.show()
-        c.raise_()
+        if pill.isVisible():
+            pill.raise_()
+            return
+        if not getattr(self.ctx.asr, "available", False):
+            box = QMessageBox(self)
+            box.setWindowTitle("Speech recognition is off")
+            box.setText("The recording can be made, but it can't be turned into a transcript until speech "
+                        "recognition is installed.")
+            box.setInformativeText("In the terminal run:  pip install -r requirements-asr.txt\n"
+                                   "then restart the app. Record anyway (the audio is kept for later)?")
+            go = box.addButton("Record anyway", QMessageBox.AcceptRole)
+            box.addButton("Cancel", QMessageBox.RejectRole)
+            box.exec()
+            if box.clickedButton() is not go:
+                return
+        d = RecordSetupDialog(self.ctx, self, project_id or self.project_id)
+        if title:
+            d.title.setText(title)
+        if not d.exec():
+            return
+        r = d.result_data
+        self.refresh_projects(select=r["project_id"])
+        pname = (self.ctx.store.project(r["project_id"]) or {}).get("name", "")
+        self.showMinimized()
+        pill.begin(r["project_id"], pname, r["title"])
+
+    def on_recording_finished(self, sid: str, keep: bool):
+        """Called when the recorder pill closes (■ stop or ✕)."""
+        self.showMaximized()
+        self.raise_()
+        self.activateWindow()
+        if keep and sid:
+            self.select_session(sid)
+            self.process(sid)
+            if sid in self.ctx.sm.live:
+                self.statusBar().showMessage("Recording saved. Finishing the last seconds of the transcript and "
+                                             "the notes…", 8000)
+            else:
+                self.statusBar().showMessage("Recording saved. Turning it into a transcript on this laptop…", 8000)
+        else:
+            self.statusBar().showMessage("Recording discarded.", 5000)
 
     # ---------- sessions ----------
     def _on_session(self, cur, _prev):
@@ -475,7 +509,12 @@ class MainWindow(QMainWindow):
     def process(self, sid: str):
         """After Stop or audio import: transcribe, then summarize, in the background."""
         def pipeline(sid=sid):
-            s = self.ctx.sm.load(sid)
+            sm = self.ctx.sm
+            if sid in sm.live:                   # transcript was written while recording: finish it off
+                return sm.finish_live(sid)
+            s = sm.load(sid)
+            if s.get("live_transcript_ok") and s["stage"] == "failed" and sm.transcript(sid).strip():
+                return sm.extract(sid)           # only the notes failed; the transcript is complete
             if s.get("audio") and s["stage"] in ("recorded", "failed"):
                 s = self.ctx.sm.transcribe(sid)
                 if s["stage"] != "transcribed":
@@ -498,6 +537,8 @@ class MainWindow(QMainWindow):
             self.refresh_sessions()
             if self.review.sid == sid:
                 self._load_review(sid)
+            if isinstance(res, dict) and res.get("saved_transcript"):
+                self.statusBar().showMessage(f"Transcript saved to {res['saved_transcript']}", 15000)
             if isinstance(res, dict) and res.get("stage") == "ready":
                 self.notify("Meeting ready for review", f"{res.get('title')}: check the changes and save.")
             elif isinstance(res, dict) and res.get("stage") == "failed":

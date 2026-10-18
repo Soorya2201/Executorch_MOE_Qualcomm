@@ -54,7 +54,7 @@ class RoutedLLM(BaseLLM):
 
     def generate(self, prompt, max_tokens=1024, json_mode=False, schema=None):
         self.prompts.append(prompt)
-        return (self.features if "list the product FEATURES" in prompt else self.notes).pop(0)
+        return (self.features if "list the main ITEMS" in prompt else self.notes).pop(0)
 
 
 FEATS = {"feature_mentions": [
@@ -126,3 +126,15 @@ def test_reversed_and_looping_dependencies_are_removed():
     login, sync = p["changes"]
     assert login["depends_on"] == [] and any("other way round" in f for f in login["flags"])
     assert sync["depends_on"] == ["User login"]
+
+
+def test_wav_is_read_without_pyav(tmp_path):
+    import wave
+    import numpy as np
+    from app.models.asr import load_audio_16k
+    p = tmp_path / "x.wav"
+    with wave.open(str(p), "wb") as w:
+        w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000)
+        w.writeframes(np.full(96000, 16384, dtype="<i2").tobytes())
+    a = load_audio_16k(str(p))
+    assert a.dtype == np.float32 and a.shape == (16000,) and abs(a.max() - 0.5) < 1e-3

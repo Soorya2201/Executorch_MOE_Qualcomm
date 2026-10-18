@@ -14,6 +14,10 @@ from .paths import check_id, clean_name, new_id
 from .store import SCHEMA_VERSION, STATUSES, Store, now_iso, render_feature, render_meeting
 
 
+MAX_EXCERPTS = 40       # transcript lines kept per feature (newest kept)
+MAX_KEY_POINTS = 12
+
+
 def norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
 
@@ -172,6 +176,13 @@ def build_commit(store: Store, proposal: dict[str, Any]) -> CommitPlan:
         plan.errors.append(f"'{owner_title}' depends on '{ref}', which is not a feature in this project or proposal.")
         return None
 
+    def titles_now(ref):
+        if not ref:
+            return ""
+        if ref in change_for:
+            return clean_name(change_for[ref].get("title") or existing.get(ref, {}).get("title") or "")
+        return existing.get(ref, {}).get("title", "")
+
     ts = now_iso()
     for fid, c in change_for.items():
         action = touched[fid]
@@ -190,9 +201,33 @@ def build_commit(store: Store, proposal: dict[str, Any]) -> CommitPlan:
                 rid = resolve(r, title)
                 if rid and rid not in deps:
                     deps.append(rid)
+            rels = []
+            for r in c.get("relations") or []:
+                to_title = str(r.get("to") or "").strip()
+                if not to_title:
+                    continue
+                rid = to_title if (to_title in existing or to_title in change_for) else title_map.get(norm(to_title))
+                if rid == fid:
+                    continue
+                if r.get("type") == "needs" and rid not in deps:
+                    continue                     # "Needs first" is the source of truth for dependencies
+                rels.append({"to": rid or "", "to_title": titles_now(rid) or to_title,
+                             "type": r.get("type") or "related", "why": str(r.get("why") or "").strip()})
+            for d in deps:
+                if not any(x["type"] == "needs" and x["to"] == d for x in rels):
+                    old = next((x for x in (prev or {}).get("relations") or []
+                                if x.get("type") == "needs" and x.get("to") == d), None)
+                    rels.append({"to": d, "to_title": titles_now(d), "type": "needs",
+                                 "why": (old or {}).get("why", "")})
+            kp = [str(k).strip() for k in (c.get("key_points") or []) if str(k).strip()]
+            if not kp:
+                kp = list((prev or {}).get("key_points") or [])
+            new_ex = [dict(e, meeting=meeting_id) for e in c.get("excerpts") or [] if e.get("text")]
+            excerpts = (list((prev or {}).get("excerpts") or []) + new_ex)[-MAX_EXCERPTS:]
             meta = {
                 "id": fid, "title": title, "status": status,
                 "description": (c.get("description") or "").strip() or (prev or {}).get("description") or "unknown",
+                "key_points": kp[:MAX_KEY_POINTS], "relations": rels, "excerpts": excerpts,
                 "subtasks": _subtasks(c.get("subtasks"), (prev or {}).get("subtasks")),
                 "depends_on": deps,
                 "impact": (c.get("impact") or "").strip() or (prev or {}).get("impact") or "unknown",
@@ -258,7 +293,7 @@ def build_commit(store: Store, proposal: dict[str, Any]) -> CommitPlan:
     if cyc:
         plan.errors.append("These features would need each other in a loop: "
                            + " → ".join(all_now[x]["title"] for x in cyc)
-                           + ". Click “Edit details” on one of them and remove the other from “Needs first”.")
+                           + ". Click “Edit details” on one of them and delete its “needs” line under “How it connects”.")
     if plan.errors:
         return plan
 
@@ -305,9 +340,14 @@ def build_commit(store: Store, proposal: dict[str, Any]) -> CommitPlan:
         what = {"add": "created", "archive": "archived (tombstone)"}.get(action) \
             or f.get("_auto_note") or ("; ".join(diffs) or "reviewed, no field changes")
         f.pop("_auto_note", None)
+        f["relations"] = [r for r in f.get("relations") or []
+                          if r.get("type") != "needs" or r.get("to") in (f.get("depends_on") or [])]
+        for r in f["relations"]:
+            if r.get("to") in titles:
+                r["to_title"] = titles[r["to"]]
         f.setdefault("history", []).append(f"r{f['revision']} · {ts[:10]} · [[{meeting_id}|{meeting_title}]]: {what}")
-        meta = {k: f[k] for k in ["id", "title", "status", "description", "subtasks", "depends_on",
-                                  "impact", "source_meetings", "created_at", "updated_at", "revision", "history"]
+        meta = {k: f[k] for k in ["id", "title", "status", "description", "key_points", "relations",
+                                  "subtasks", "depends_on", "impact", "excerpts", "source_meetings", "created_at", "updated_at", "revision", "history"]
                 if k in f}
         plan.files[rel] = render_feature(meta, titles, meeting_titles, meta.get("history", []))
 

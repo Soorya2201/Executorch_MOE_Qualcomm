@@ -14,6 +14,7 @@ from .common import STATUS_COLOR
 
 EDGE_STYLE = {
     "feature_depends_on_feature": (QColor("#e53935"), Qt.SolidLine, "depends on"),
+    "feature_relates_to_feature": (QColor("#1e88e5"), Qt.SolidLine, "is connected to"),
     "meeting_updates_feature": (QColor("#90a4ae"), Qt.DashLine, "updated"),
     "meeting_relates_to_meeting": (QColor("#8e24aa"), Qt.DotLine, "relates to"),
 }
@@ -65,7 +66,7 @@ class EdgeItem(QGraphicsPathItem):
         self.setPen(self.base_pen)
         path = QPainterPath(a)
         path.lineTo(b)
-        if edge["type"] == "feature_depends_on_feature":   # arrowhead at the dependency
+        if edge["type"] in ("feature_depends_on_feature", "feature_relates_to_feature"):   # arrowhead
             ang = math.atan2(b.y() - a.y(), b.x() - a.x())
             tip = QPointF(b.x() - 26 * math.cos(ang), b.y() - 26 * math.sin(ang))
             for s in (-0.4, 0.4):
@@ -143,7 +144,7 @@ class GraphView(QWidget):
                 it = EdgeItem(pos[e["src"]], pos[e["dst"]], e)
                 self.scene.addItem(it)
                 self.edge_items.append(it)
-                verb = EDGE_STYLE.get(e["type"], (None, None, e["type"]))[2]
+                verb = e.get("verb") or EDGE_STYLE.get(e["type"], (None, None, e["type"]))[2]
                 QListWidgetItem(f"{label[e['src']]} — {verb} → {label[e['dst']]}", self.list)
         font = QFont()
         font.setPointSize(9)

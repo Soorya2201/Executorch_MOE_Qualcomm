@@ -14,18 +14,18 @@ NEW = "__new__"
 
 class AddMeetingDialog(QDialog):
     """Result (after exec() == Accepted): self.result_data =
-    {"project_id", "title", "mode": "paste"|"text_file"|"audio_file"|"record", "text", "path"}"""
+    {"project_id", "title", "mode": "paste"|"text_file"|"audio_file", "text", "path"}"""
 
     def __init__(self, ctx, parent=None, project_id: str | None = None):
         super().__init__(parent)
         self.ctx = ctx
         self.result_data: dict = {}
-        self.setWindowTitle("Add a meeting")
+        self.setWindowTitle("Add a transcript")
         self.setMinimumWidth(620)
         lay = QVBoxLayout(self)
         lay.setSpacing(10)
 
-        h = QLabel("Add a meeting")
+        h = QLabel("Add a transcript")
         h.setObjectName("h1")
         lay.addWidget(h)
         sub = QLabel("The app reads the meeting, then shows you the suggested changes to review. "
@@ -64,8 +64,7 @@ class AddMeetingDialog(QDialog):
         self.r_audio = QRadioButton("Open an audio recording (.wav, .mp3)" +
                                     ("" if asr_ok else "  — needs speech recognition (README step 6b)"))
         self.r_audio.setEnabled(asr_ok)
-        self.r_record = QRadioButton("Record it live now (opens the small recording window)")
-        for i, r in enumerate((self.r_paste, self.r_file, self.r_audio, self.r_record)):
+        for i, r in enumerate((self.r_paste, self.r_file, self.r_audio)):
             self.group.addButton(r, i)
             lay.addWidget(r)
         self.r_file.setChecked(True)
@@ -95,7 +94,7 @@ class AddMeetingDialog(QDialog):
         btns = QHBoxLayout()
         btns.addStretch(1)
         cancel = QPushButton("Cancel")
-        self.ok = QPushButton("Add meeting")
+        self.ok = QPushButton("Add transcript")
         self.ok.setObjectName("primary")
         btns.addWidget(cancel)
         btns.addWidget(self.ok)
@@ -118,7 +117,7 @@ class AddMeetingDialog(QDialog):
         mode = self.group.checkedId()
         self.paste.setVisible(mode == 0)
         self.file_row.setVisible(mode in (1, 2))
-        self.ok.setText("Open recorder" if mode == 3 else "Add meeting")
+        self.ok.setText("Add transcript")
         self.adjustSize()
 
     def _browse(self):
@@ -140,7 +139,7 @@ class AddMeetingDialog(QDialog):
                 QMessageBox.information(self, "Project name", "Please type a name for the new project.")
                 return
             pid = self.ctx.sm.create_project(name)["id"]
-        mode = ["paste", "text_file", "audio_file", "record"][self.group.checkedId()]
+        mode = ["paste", "text_file", "audio_file"][self.group.checkedId()]
         title = self.title.text().strip() or f"Meeting {dt.date.today().isoformat()}"
         text = ""
         if mode == "paste":
@@ -154,4 +153,63 @@ class AddMeetingDialog(QDialog):
         if mode == "text_file":
             text = Path(self.path).read_text(encoding="utf-8", errors="replace")
         self.result_data = {"project_id": pid, "title": title, "mode": mode, "text": text, "path": self.path}
+        self.accept()
+
+
+class RecordSetupDialog(QDialog):
+    """Before recording: which project, and what the meeting is called."""
+
+    def __init__(self, ctx, parent=None, project_id: str | None = None):
+        super().__init__(parent)
+        self.ctx = ctx
+        self.result_data: dict = {}
+        self.setWindowTitle("Record a meeting")
+        self.setMinimumWidth(460)
+        lay = QVBoxLayout(self)
+        h = QLabel("Record a meeting")
+        h.setObjectName("h1")
+        lay.addWidget(h)
+        sub = QLabel("The app records your microphone and the computer's sound (the other people in the call). "
+                     "This window will minimize and a small recorder appears at the top of the screen. "
+                     "Tell everyone in the meeting that you are recording.")
+        sub.setWordWrap(True)
+        sub.setObjectName("muted")
+        lay.addWidget(sub)
+        lay.addWidget(QLabel("<b>Project</b>"))
+        self.project = QComboBox()
+        for p in ctx.store.list_projects():
+            self.project.addItem(p["name"], p["id"])
+        self.project.addItem("➕ Create a new project…", NEW)
+        if project_id and self.project.findData(project_id) >= 0:
+            self.project.setCurrentIndex(self.project.findData(project_id))
+        self.new_name = QLineEdit()
+        self.new_name.setPlaceholderText("Name of the new project")
+        lay.addWidget(self.project)
+        lay.addWidget(self.new_name)
+        lay.addWidget(QLabel("<b>Meeting name</b>"))
+        self.title = QLineEdit(f"Meeting {dt.datetime.now().strftime('%b %d %H:%M')}")
+        lay.addWidget(self.title)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        cancel = QPushButton("Cancel")
+        ok = QPushButton("Open recorder")
+        ok.setObjectName("record")
+        row.addWidget(cancel)
+        row.addWidget(ok)
+        lay.addLayout(row)
+        cancel.clicked.connect(self.reject)
+        ok.clicked.connect(self._accept)
+        self.project.currentIndexChanged.connect(
+            lambda *_: self.new_name.setVisible(self.project.currentData() == NEW))
+        self.new_name.setVisible(self.project.currentData() == NEW)
+
+    def _accept(self):
+        pid = self.project.currentData()
+        if pid == NEW:
+            name = self.new_name.text().strip()
+            if not name:
+                QMessageBox.information(self, "Project name", "Please type a name for the new project.")
+                return
+            pid = self.ctx.sm.create_project(name)["id"]
+        self.result_data = {"project_id": pid, "title": self.title.text().strip() or "Meeting"}
         self.accept()
