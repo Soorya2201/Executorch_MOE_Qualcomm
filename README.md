@@ -72,7 +72,29 @@ git apply ..\Executorch_MOE_Qualcomm\patches\0001-qnn_executor_runner-fix-window
   hard-coded `openai/whisper-tiny` (added `--hf_model`) and `whisper_model.py` hard-coded the decoder's
   example `encoder_hidden_states` as d_model 384, so small (768) failed with a channel mismatch.
 
-Apply all patches (each applies cleanly to v1.5.1): `git apply ..\Executorch_MOE_Qualcomm\patches\*.patch`
+- **[0005](patches/0005-qnn_llama_runner-server-mode.patch): `qnn_llama_runner --server`.** Loads the
+  `.pte` once and answers requests over stdin (`<prompt_file>\t<seq_len>\t<output_file>` -> `OK\t...`), so an app
+  does not reload a 5 GB model per request: 7.3 s -> 1.4 s for a short request. Replies are byte-identical to the
+  one-shot runner (verified), and each request starts a fresh conversation.
+- **[0006](patches/0006-hybrid-export-memory-safe-and-calibration-checkpoint.patch): hybrid export within
+  32 GB RAM.** Hybrid mode (a 128-token prefill graph + the kv graph) built three fp32 copies of the model at once
+  and ran out of RAM + a 64 GB page file. The exporter now frees the calibration copy before building the prefill
+  copy (two copies at peak) and garbage-collects between stages. It also saves the calibration result
+  (`calibration_encodings.pt`) and trusts it only after replaying it reproduces the original encoding override
+  exactly, so a crash after calibration costs minutes instead of a full re-calibration.
+
+Apply all patches in order (each applies cleanly on v1.5.1 plus the earlier ones): `git apply ..\Executorch_MOE_Qualcomm\patches\*.patch`
+
+## MeetingGraph (`meetinggraph/`)
+
+A private meeting memory that runs on the NPU: record or import a meeting, get a transcript (Whisper-small on the
+NPU), notes and feature changes (Phi-4-mini W8A16 on the NPU), approve them, then browse the project map and ask
+cited questions. Nothing leaves the laptop. **Every measured number is in
+[meetinggraph/QUANTIFY.md](meetinggraph/QUANTIFY.md)** (kept up to date); setup is in
+[meetinggraph/README.md](meetinggraph/README.md).
+
+Phi-4-mini accuracy on 10 fixed prompts ([results/llm/phi_eval](results/llm/phi_eval)): original bf16 on the CPU
+10/10; W8A16 on the NPU 7/10 at 12.2 tok/s (shipped); 16-bit KV cache 7/10 at 10.0 tok/s.
 
 ## Windows-on-ARM build gotchas (all solved)
 
@@ -139,9 +161,10 @@ strict JSON) -> plan -> [review] -> move + undo log`.
 ## Repo layout
 
 ```
-patches/    0001-0004, git apply onto ExecuTorch v1.5.1
+patches/    0001-0006, git apply onto ExecuTorch v1.5.1
 scripts/    et-env.ps1, calibration/HF download helpers, delegation report, test matrix,
-            llm/ (Qwen run, Phi export), stt/ (Whisper prep, run, WER)
+            llm/ (Qwen run, Phi exports v1/v2/hybrid, NPU test suite, CPU reference, metrics), stt/ (Whisper)
+meetinggraph/  NPU meeting memory app (QUANTIFY.md = presentation numbers)
 organizer/  NPU file organizer app
 docs/       works.txt (full change log), moe-pipeline-brainstorm.md
 results/    runner, benchmark, build and export logs (DeepLab, LLM, STT)

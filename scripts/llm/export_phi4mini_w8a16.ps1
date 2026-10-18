@@ -16,7 +16,8 @@ if ($pf -lt 16000) {
 
 # 2. Keep the laptop awake for the whole export (released when this script exits).
 Add-Type -Namespace Win32 -Name Power -MemberDefinition '[DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint esFlags);'
-[Win32.Power]::SetThreadExecutionState(0x80000001) | Out-Null  # ES_CONTINUOUS | ES_SYSTEM_REQUIRED
+# ES_CONTINUOUS | ES_SYSTEM_REQUIRED. Parsed from hex text: PS 5.1 reads 0x80000001 as a negative Int32.
+[Win32.Power]::SetThreadExecutionState([Convert]::ToUInt32('80000001', 16)) | Out-Null
 
 # 3. Environment: x64 Python, x64 QNN DLLs, UTF-8, offline (weights are already in the HF cache).
 . C:\et\et-env.ps1
@@ -31,7 +32,7 @@ $sw = [Diagnostics.Stopwatch]::StartNew()
 cmd /c "python examples\qualcomm\oss_scripts\llama\llama.py --build_folder build-x86_64-windows --soc_model SC8380XP --decoder_model phi_4_mini-w8a16 --model_mode kv --max_seq_len 2048 --temperature 0 --prompt ""What is the capital of France?"" --calib_samples C:\et\llm\calib_text_8.json --compile_only --artifact $artifact > $log 2>&1"
 $code = $LASTEXITCODE
 Write-Host ("export exit code {0} after {1:N1} h" -f $code, $sw.Elapsed.TotalHours)
-[Win32.Power]::SetThreadExecutionState(0x80000000) | Out-Null  # back to normal sleep behaviour
+[Win32.Power]::SetThreadExecutionState([Convert]::ToUInt32('80000000', 16)) | Out-Null  # back to normal sleep behaviour
 
 # 4. Report.
 Get-ChildItem $artifact -File | Select-Object Name, @{n = 'MB'; e = { [math]::Round($_.Length / 1MB, 1) } } | Format-Table -AutoSize

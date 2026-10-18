@@ -1,0 +1,125 @@
+From 54d51587ad68470c78f39fc59fc50d4b2c360762 Mon Sep 17 00:00:00 2001
+From: Soorya2201 <107684450+Soorya2201@users.noreply.github.com>
+Date: Sun, 18 Oct 2026 04:27:32 -0700
+Subject: [PATCH] qnn_llama_runner: --server mode (load the .pte once, answer
+ requests over stdin)
+
+---
+ .../oss_scripts/llama/qnn_llama_runner.cpp    | 69 +++++++++++++++++++
+ .../oss_scripts/llama/runner/runner.h         |  6 +-
+ 2 files changed, 74 insertions(+), 1 deletion(-)
+
+diff --git a/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp b/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp
+index 6692be3..9da920e 100644
+--- a/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp
++++ b/examples/qualcomm/oss_scripts/llama/qnn_llama_runner.cpp
+@@ -23,6 +23,9 @@
+ #include <executorch/runtime/platform/runtime.h>
+ #include <gflags/gflags.h>
+ #include <fstream>
++#include <iostream>
++#include <sstream>
++#include <string>
+ #include <vector>
+ 
+ DEFINE_string(decoder_model_version, "llama2", "The decoder model to execute.");
+@@ -89,6 +92,13 @@ DEFINE_int32(
+     0,
+     "[Lookahead Decoding] Represents the maximum number of speculations or candidate n-grams that the algorithm considers in each step for verification. It balances the trade-off between computation efficiency and exploring more possibilities.");
+ 
++DEFINE_bool(
++    server,
++    false,
++    "Load the model once, then read requests from stdin: <prompt_file>\\t<seq_len>\\t<output_file> per "
++    "line (QUIT to exit). Replies one line per request: OK\\t<prompt_tokens>\\t<generated>\\t<prefill_ms>\\t"
++    "<total_ms> or ERR\\t<message>.");
++
+ std::vector<std::string> CollectPrompts(int argc, char** argv) {
+   // Collect all prompts from command line, example usage:
+   // --prompt "prompt1" --prompt "prompt2" --prompt "prompt3"
+@@ -267,6 +277,65 @@ void start_runner(
+       static_cast<float>(FLAGS_temperature),
+       0,
+       0};
++  if (FLAGS_server) {
++    fout.close();
++    if (runner.load() != executorch::runtime::Error::Ok) {
++      std::cout << "ERR\tmodel load failed" << std::endl;
++      return;
++    }
++    std::cout << "READY" << std::endl;
++    std::string line;
++    while (std::getline(std::cin, line)) {
++      if (!line.empty() && line.back() == '\r') {
++        line.pop_back();
++      }
++      if (line == "QUIT") {
++        break;
++      }
++      std::istringstream req(line);
++      std::string prompt_file, seq_len_s, output_file;
++      if (!std::getline(req, prompt_file, '\t') ||
++          !std::getline(req, seq_len_s, '\t') ||
++          !std::getline(req, output_file)) {
++        std::cout << "ERR\tbad request" << std::endl;
++        continue;
++      }
++      std::ifstream pin(prompt_file, std::ios::binary);
++      std::stringstream text;
++      text << pin.rdbuf();
++      if (!pin.is_open() || text.str().empty()) {
++        std::cout << "ERR\tcannot read prompt file" << std::endl;
++        continue;
++      }
++      buf.clear();
++      config.seq_len = std::stoi(seq_len_s);
++      // Stats is not copyable: keep only the numbers we report.
++      int64_t n_prompt = 0, n_gen = 0, prefill_ms = 0, total_ms = 0;
++      runner.reset();
++      auto err = runner.generate_from_prompt_or_file(
++          get_formatted_prompt(
++              text.str(), FLAGS_system_prompt, decoder_model_version.get()),
++          false,
++          config,
++          callback,
++          [&](const executorch::llm::Stats& s) {
++            n_prompt = s.num_prompt_tokens;
++            n_gen = s.num_generated_tokens;
++            prefill_ms = s.prompt_eval_end_ms - s.inference_start_ms;
++            total_ms = s.inference_end_ms - s.inference_start_ms;
++          });
++      std::ofstream out(output_file, std::ios::binary);
++      out.write(buf.data(), buf.size());
++      out.close();
++      if (err != executorch::runtime::Error::Ok) {
++        std::cout << "ERR\tgenerate failed" << std::endl;
++        continue;
++      }
++      std::cout << "OK\t" << n_prompt << "\t" << n_gen << "\t" << prefill_ms
++                << "\t" << total_ms << std::endl;
++    }
++    return;
++  }
+   if (use_tokenized_prompt) {
+     runner.generate_from_prompt_or_file(
+         FLAGS_tokenized_prompt.c_str(), use_tokenized_prompt, config, callback);
+diff --git a/examples/qualcomm/oss_scripts/llama/runner/runner.h b/examples/qualcomm/oss_scripts/llama/runner/runner.h
+index a996c92..11d4856 100644
+--- a/examples/qualcomm/oss_scripts/llama/runner/runner.h
++++ b/examples/qualcomm/oss_scripts/llama/runner/runner.h
+@@ -90,7 +90,11 @@ class Runner : public executorch::extension::llm::IRunner {
+       std::function<void(const std::string&)> token_callback = {},
+       std::function<void(const executorch::llm::Stats&)> stats_callback = {});
+   void stop() override {};
+-  void reset() override {};
++  // Start the next generate() as a fresh conversation (server mode). The attention mask is rebuilt from
++  // the position on every call, so cache entries past it are never attended to.
++  void reset() override {
++    cur_pos_ = 0;
++  };
+   executorch::runtime::Result<DecoderModelVersion> get_decoder_model_version();
+ 
+  private:
+-- 
+2.55.0.windows.5
+

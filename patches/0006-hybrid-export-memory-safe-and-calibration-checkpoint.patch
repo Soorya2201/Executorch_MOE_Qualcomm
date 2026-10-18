@@ -1,0 +1,424 @@
+From 7fe75fabfaac7de5a102dfad470533916a4c32f5 Mon Sep 17 00:00:00 2001
+From: Soorya2201 <107684450+Soorya2201@users.noreply.github.com>
+Date: Sun, 18 Oct 2026 04:27:32 -0700
+Subject: [PATCH] llama export: hybrid mode within 32 GB RAM (two model copies
+ at peak, gc between stages) + verified calibration checkpoint
+
+---
+ .../llama/wrappers/encoding_checkpoint.py     | 176 ++++++++++++++++++
+ .../llama/wrappers/llm_wrappers.py            | 166 +++++++++++------
+ 2 files changed, 282 insertions(+), 60 deletions(-)
+ create mode 100644 examples/qualcomm/oss_scripts/llama/wrappers/encoding_checkpoint.py
+
+diff --git a/examples/qualcomm/oss_scripts/llama/wrappers/encoding_checkpoint.py b/examples/qualcomm/oss_scripts/llama/wrappers/encoding_checkpoint.py
+new file mode 100644
+index 0000000..64ada46
+--- /dev/null
++++ b/examples/qualcomm/oss_scripts/llama/wrappers/encoding_checkpoint.py
+@@ -0,0 +1,176 @@
++"""Checkpoint for the calibration result of a static LLM export (resume without re-calibrating).
++
++HybridTextDecoder._encoding_override copies quantization encodings from the calibrated graph to a fresh graph
++by walking both graphs in the same order. This module splits that walk in two: capture() records, in walk
++order, everything the override would copy (q/dq parameters, get_attr tensors, KV-cache encodings, plus each
++node's identity string for the same consistency checks), and apply() replays it onto a fresh graph. The
++record is saved with torch.save, so a crash after calibration costs minutes instead of a full re-calibration.
++"""
++from __future__ import annotations
++
++import os
++from typing import Any
++
++import torch
++from executorch.backends.qualcomm.builders.utils import is_graph_output
++
++class _Ops:
++    """q/dq op sets, looked up on first use (the torchao ops are registered by later imports)."""
++    _qdq = _ptq = None
++
++    @classmethod
++    def qdq(cls):
++        if cls._qdq is None:
++            cls._qdq = {
++                torch.ops.torchao.dequantize_affine,
++                torch.ops.torchao.quantize_affine,
++                torch.ops.quantized_decomposed.dequantize_per_channel.default,
++                torch.ops.quantized_decomposed.quantize_per_channel.default,
++            } | cls.ptq()
++        return cls._qdq
++
++    @classmethod
++    def ptq(cls):
++        if cls._ptq is None:
++            cls._ptq = {
++                torch.ops.quantized_decomposed.dequantize_per_tensor.default,
++                torch.ops.quantized_decomposed.quantize_per_tensor.default,
++            }
++        return cls._ptq
++
++
++_NODE = "__fx_node__"   # an argument that is a graph node: keep the target graph's own node at that position
++
++
++def _info(node) -> str:
++    return node.name + (str(node.meta["nn_module_stack"].values()) if node.op == "call_function" else "")
++
++
++def _resolve_param_target(node):
++    return node if node.op == "call_function" and node.target not in _Ops.qdq() else _resolve_param_target(list(node.users)[0])
++
++
++def _get_attr(gm, target: str) -> Any:
++    attr = gm
++    for atom in target.split("."):
++        attr = getattr(attr, atom)
++    return attr
++
++
++def _set_attr(gm, target: str, value: Any) -> None:
++    attr = gm
++    parts = target.split(".")
++    for atom in parts[:-1]:
++        attr = getattr(attr, atom)
++    setattr(attr, parts[-1], value)
++
++
++def _nodes(gm):
++    params = {n: _resolve_param_target(n) for n in gm.graph.nodes if n.op == "get_attr"}
++    acts = [n for n in gm.graph.nodes if n.target not in _Ops.qdq() and n.op in {"call_function", "placeholder"}]
++    return params, acts
++
++
++def _record_users(qnode) -> list:
++    out = []
++    for u in list(qnode.users):
++        if u.name == "output":
++            out.append(("skip",))
++        elif u.target in _Ops.qdq():
++            args = tuple(_NODE if isinstance(a, torch.fx.Node) else a for a in u.args[1:])
++            out.append(("qdq", str(u.target), args, _record_users(u)))
++        else:
++            out.append(("other", str(u.target)))
++    return out
++
++
++def _replay_users(rec: list, unode) -> None:
++    for item, u in zip(rec, list(unode.users)):
++        if item[0] == "skip":
++            continue
++        want = item[1]
++        assert str(u.target) == want, f"found unmatched targets: {want} vs {u.target}"
++        if item[0] == "qdq":
++            u.args = (u.args[0], *[u.args[i + 1] if a == _NODE else a for i, a in enumerate(item[2])])
++            _replay_users(item[3], u)
++
++
++def _kv_outputs(gm, is_node_src_start_with_name):
++    k, v = [], []
++    for node in gm.graph.nodes:
++        if not is_graph_output(node):
++            continue
++        cache = node.args[0].args[0]
++        if is_node_src_start_with_name(cache, kv_cache_prefix="k_"):
++            k.append(cache)
++        elif is_node_src_start_with_name(cache, kv_cache_prefix="v_"):
++            v.append(cache)
++    if not k or not v:
++        raise RuntimeError("KV cache detection failed while capturing encodings.")
++    return k, v
++
++
++def capture(quantized_model, is_node_src_start_with_name) -> dict:
++    params, acts = _nodes(quantized_model)
++    k_out, v_out = _kv_outputs(quantized_model, is_node_src_start_with_name)
++    return {
++        "version": 1,
++        "act_info": [_info(n) for n in acts],
++        "acts": [_record_users(n) for n in acts],
++        "param_info": [_info(t) for t in params.values()],
++        "params": [(_get_attr(quantized_model, p.target),
++                    _record_users(p) if list(p.users)[0].target in _Ops.ptq() else None) for p in params],
++        "kv_k": [_record_users(n) for n in k_out],
++        "kv_v": [_record_users(n) for n in v_out],
++    }
++
++
++def apply(rec: dict, unquantized_model, n_cache_layers: int) -> None:
++    """Replay a capture() record onto a fresh (converted, unencoded) graph. Same checks as _encoding_override."""
++    params, acts = _nodes(unquantized_model)
++    assert len(acts) == len(rec["acts"]) and len(params) == len(rec["params"]), "graph shape differs from checkpoint"
++    for want, node in zip(rec["act_info"], acts):
++        assert want == _info(node), f"found unmatched order for ops: {want} vs {_info(node)}"
++    for want, node in zip(rec["param_info"], params.values()):
++        assert want == _info(node), f"found unmatched order for ops: {want} vs {_info(node)}"
++    for users, node in zip(rec["acts"], acts):
++        _replay_users(users, node)
++    for (tensor, users), p in zip(rec["params"], params):
++        _set_attr(unquantized_model, p.target, tensor)
++        if users is not None:
++            _replay_users(users, p)
++    k_in, v_in = [], []
++    for node in unquantized_model.graph.nodes:
++        if node.op == "placeholder" and "args_" in node.name:
++            (v_in if int(node.name.split("_")[-1]) >= n_cache_layers else k_in).append(node)
++    if not k_in or not v_in:
++        raise RuntimeError("KV cache input detection failed while applying encodings.")
++    for users, node in zip(rec["kv_k"], k_in):
++        _replay_users(users, node)
++    for users, node in zip(rec["kv_v"], v_in):
++        _replay_users(users, node)
++    unquantized_model.recompile()
++
++
++def fingerprint(gm) -> list:
++    """Everything an encoding override can change: every q/dq node's non-node arguments and every get_attr
++    tensor (by identity). Two equal fingerprints mean two identical encodings."""
++    fp = []
++    for n in gm.graph.nodes:
++        if n.target in _Ops.qdq():
++            fp.append((n.name, tuple(a.tolist() if isinstance(a, torch.Tensor) else (None if isinstance(a, torch.fx.Node) else a)
++                                     for a in n.args[1:])))
++        elif n.op == "get_attr":
++            x = _get_attr(gm, n.target)
++            fp.append((n.target, id(x) if isinstance(x, torch.Tensor) else x))
++    return fp
++
++
++def save(rec: dict, path: str) -> None:
++    tmp = path + ".tmp"
++    torch.save(rec, tmp)
++    os.replace(tmp, path)          # atomic: a crash while saving never leaves a half-written checkpoint
++
++
++def load(path: str) -> dict:
++    return torch.load(path, weights_only=False)
+diff --git a/examples/qualcomm/oss_scripts/llama/wrappers/llm_wrappers.py b/examples/qualcomm/oss_scripts/llama/wrappers/llm_wrappers.py
+index 264f8b7..415f33e 100644
+--- a/examples/qualcomm/oss_scripts/llama/wrappers/llm_wrappers.py
++++ b/examples/qualcomm/oss_scripts/llama/wrappers/llm_wrappers.py
+@@ -9,6 +9,7 @@ import gc
+ import inspect
+ import json
+ import logging
++import os
+ import re
+ 
+ from functools import partial
+@@ -93,6 +94,7 @@ from executorch.examples.qualcomm.oss_scripts.llama.static_llm_quant_recipe impo
+ )
+ from executorch.examples.qualcomm.oss_scripts.llama.tokenizer import TokenizerWrapper
+ from executorch.examples.qualcomm.oss_scripts.llama.train.config import TrainingArgs
++from executorch.examples.qualcomm.oss_scripts.llama.wrappers import encoding_checkpoint
+ from executorch.examples.qualcomm.oss_scripts.llama.wrappers.base_component import (
+     Component,
+     get_model_specific_kwargs,
+@@ -872,12 +874,10 @@ class HybridTextDecoder(Component):
+             Mode.DECODE,
+             apply_embedding=apply_embedding,
+         )
+-        self.prefill = TextDecoder(
+-            control_args,
+-            config,
+-            Mode.PREFILL,
+-            apply_embedding=apply_embedding,
+-        )
++        # Built later by _build_prefill(), after the calibration model is freed: three full fp32 copies of a
++        # 4B model at once do not fit in 32 GB RAM + 64 GB page file.
++        self.prefill = None
++        self._encodings_done = False
+         # Full AR sequence with KV cache; used only for quantization.
+         # Scales/zp collected here are propagated to decode and prefill graphs via _encoding_override.
+         self.calibration_prefill = TextDecoder(
+@@ -889,10 +889,19 @@ class HybridTextDecoder(Component):
+ 
+         self.control_args = control_args
+         self.config = config
+-        self.set_next(self.decode).set_next(self.prefill)
++        # No set_next(decode).set_next(prefill): quantize() runs them itself, in a memory-safe order.
+ 
+         self.apply_embedding = apply_embedding
+ 
++    def _build_prefill(self):
++        if self.prefill is None:
++            self.prefill = TextDecoder(
++                self.control_args,
++                self.config,
++                Mode.PREFILL,
++                apply_embedding=self.apply_embedding,
++            )
++
+     def _encoding_override(  # noqa: C901
+         self,
+         quantized_model,
+@@ -1064,41 +1073,79 @@ class HybridTextDecoder(Component):
+ 
+     def quantize(self, request: Request):
+         if request.method_data[TEXT_DECODER].skip_quantize:
++            self._build_prefill()
+             return
+-        self.calibration_prefill.quantize(request)
++        # gc.collect() after every stage: export/prepare/convert leave the previous FX graph (with its own
++        # fp32 weights) behind in reference cycles, which only the cycle collector frees. Without it the
++        # stale copies pile up and a 4B model runs out of RAM + page file.
++        ckpt = f"{self.control_args.artifact}/calibration_encodings.pt"
++        verified = ckpt + ".verified"     # written only after the checkpoint reproduced the original override
++        if os.path.exists(ckpt) and os.path.exists(verified) and not self.apply_embedding:
++            # Resume: calibration already done in an earlier run; its encodings are on disk.
++            logging.info(f"Resuming from calibration checkpoint {ckpt}")
++            del self.calibration_prefill
++            gc.collect()
++            self.decode.quantize(request)
++            gc.collect()
++            rec = encoding_checkpoint.load(ckpt)
++            encoding_checkpoint.apply(rec, self.decode.decoder, self._n_cache_layers())
++            del rec
++            self._decode_meta_from_encodings()
++        else:
++            self.calibration_prefill.quantize(request)
++            gc.collect()
++            rec = encoding_checkpoint.capture(self.calibration_prefill.decoder, is_node_src_start_with_name)
++            encoding_checkpoint.save(rec, ckpt)
++            logging.info(f"Calibration checkpoint saved to {ckpt}")
++            self.decode.quantize(request)
++            gc.collect()
++            self._encodings_calibration_to_decode()
++            # Prove the checkpoint reproduces the original override exactly (so a resumed run is identical).
++            before = encoding_checkpoint.fingerprint(self.decode.decoder)
++            encoding_checkpoint.apply(rec, self.decode.decoder, self._n_cache_layers())
++            assert encoding_checkpoint.fingerprint(self.decode.decoder) == before,                 "calibration checkpoint does not reproduce the encoding override"
++            open(verified, "w").close()
++            logging.info("Calibration checkpoint verified against the original encoding override")
++            del rec, before
++            # The calibration model is not needed past this point: free it BEFORE building the prefill model.
++            del self.calibration_prefill
++        gc.collect()
++        self._build_prefill()
++        self.prefill.quantize(request)
++        gc.collect()
++        self._encodings_decode_to_prefill()
++        gc.collect()
++        self._encodings_done = True
+ 
+-    @log_info
+-    def compile(self, request: Request):  # noqa: C901
+-        # perform encoding override for models to compile
+-        # ---
++    def _n_cache_layers(self) -> int:
++        return (self.decode.meta["get_n_self_layers"] if self.control_args.decoder_model == "gemma4-e2b"
++                else self.decode.meta["get_n_layers"])
++
++    def _decode_meta_from_encodings(self):
++        # what _encodings_calibration_to_decode does after the override (resume path)
++        self.decode._save_logits_quant_attrs()
++        self.decode._save_output_kv_cache_quant_attrs()
++
++    def _encodings_calibration_to_decode(self):
+         # theoretically decode & prefill model should share the same encoding
+         # given that they are using the identical calibration dataset.
+-        #
+-        #
+-        # here we use a mechanism to make sure the encoding align correctly and
+-        # save AoT quantization time as well.
+-        # ---
+-        if not request.method_data[TEXT_DECODER].skip_quantize:
++        self._encoding_override(
++            quantized_model=self.calibration_prefill.decoder,
++            unquantized_model=self.decode.decoder,
++            override_kv_cache=True,
++        )
++        # save logit's quantization attributes to meta
++        self.decode._save_logits_quant_attrs()
++        # save output KV cache's quantization attributes to meta for attention sink
++        self.decode._save_output_kv_cache_quant_attrs()
++        if self.apply_embedding:
+             self._encoding_override(
+-                quantized_model=self.calibration_prefill.decoder,
+-                unquantized_model=self.decode.decoder,
+-                override_kv_cache=True,
++                quantized_model=self.calibration_prefill.tok_embedding,
++                unquantized_model=self.decode.tok_embedding,
++                override_kv_cache=False,
+             )
+-
+-            # save logit's quantization attributes to meta
+-            self.decode._save_logits_quant_attrs()
+-
+-            # save output KV cache's quantization attributes to meta for attention sink
+-            self.decode._save_output_kv_cache_quant_attrs()
+-
+-            if self.apply_embedding:
+-                self._encoding_override(
+-                    quantized_model=self.calibration_prefill.tok_embedding,
+-                    unquantized_model=self.decode.tok_embedding,
+-                    override_kv_cache=False,
+-                )
+-
+-            # Saving Decode QDQ Model EP for SQNR evaluation
++        # Decode QDQ model EP, only used by SQNR evaluation (never with --compile_only): 23 GB for Phi-4-mini.
++        if not getattr(self.control_args, "compile_only", False):
+             qdq_ep = torch.export.export(
+                 self.calibration_prefill.decoder,
+                 self.calibration_prefill.export_input,
+@@ -1107,36 +1154,35 @@ class HybridTextDecoder(Component):
+             qdq_ep_path = f"{self.decode.control_args.artifact}/{DECODE_QDQ_FILENAME}"
+             torch.export.save(qdq_ep, qdq_ep_path)
+             logging.info(f"QDQ EP saved to {qdq_ep_path}")
++            del qdq_ep
+ 
++    def _encodings_decode_to_prefill(self):
++        # For hybrid mode, override encoding of prefill model.
++        if self.prefill.decoder is not None and self.prefill.meta["get_use_kv_cache"]:
++            self._encoding_override(
++                quantized_model=self.decode.decoder,
++                unquantized_model=self.prefill.decoder,
++                override_kv_cache=True,
++            )
+             if self.apply_embedding:
+                 self._encoding_override(
+-                    quantized_model=self.calibration_prefill.tok_embedding,
+-                    unquantized_model=self.decode.tok_embedding,
++                    quantized_model=self.decode.tok_embedding,
++                    unquantized_model=self.prefill.tok_embedding,
+                     override_kv_cache=False,
+                 )
+ 
+-            # For hybrid mode, override encoding of prefill model.
+-            if (
+-                self.prefill.decoder is not None
+-                and self.prefill.meta["get_use_kv_cache"]
+-            ):
+-                self._encoding_override(
+-                    quantized_model=self.decode.decoder,
+-                    unquantized_model=self.prefill.decoder,
+-                    override_kv_cache=True,
+-                )
+-
+-                if self.apply_embedding:
+-                    self._encoding_override(
+-                        quantized_model=self.decode.tok_embedding,
+-                        unquantized_model=self.prefill.tok_embedding,
+-                        override_kv_cache=False,
+-                    )
+-
+-        # calibration_prefill is only used for encoding override
+-        # free it once encoding override is complete.
+-        del self.calibration_prefill
+-        gc.collect()
++    @log_info
++    def compile(self, request: Request):  # noqa: C901
++        # Encodings were moved calibration -> decode -> prefill in quantize(), which also freed the
++        # calibration model before the prefill model was built (memory). Fallback if quantize() was bypassed.
++        self._build_prefill()
++        if not request.method_data[TEXT_DECODER].skip_quantize and not self._encodings_done:
++            self._encodings_calibration_to_decode()
++            self._encodings_decode_to_prefill()
++            self._encodings_done = True
++        if hasattr(self, "calibration_prefill"):
++            del self.calibration_prefill
++            gc.collect()
+ 
+         # prepare lowering tok_embedding if applicable
+         if self.apply_embedding:
+-- 
+2.55.0.windows.5
+

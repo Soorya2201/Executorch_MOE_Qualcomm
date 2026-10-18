@@ -1,0 +1,52 @@
+{
+ "reasoning": {
+  "pass": false,
+  "answer": "The ball costs $0.10.",
+  "tok_per_s": 9.96264
+ },
+ "reasoning_cot": {
+  "pass": false,
+  "answer": "Let's use algebra to set up the problem and solve it step by step.\n\n1. Let the cost of the ball be \\( x \\) dollars.\n2. The cost of the bat is \\( x + 1.10 \\) dollars.\n3. The total cost of the bat and the ball is given as $1.10.\n\nWe are to find the cost of the ball.\n\nThe total cost of the bat and the ball is given by:\n\\[ x + (x + 1.10) = 1.10 \\]\n\nSimplify the equation:\n\\[ 2x + 1.10 = 1.10 \\]\n\nSubtract 1.10 from both sides to solve for \\( x \\):\n\\[ 2x = 0 \\]\n\n\\[ x = 0.55 \\]\n\nSo, the cost of the ball is \\( \\boxed{0.55} \\) dollars.",
+  "tok_per_s": 10.036196
+ },
+ "math": {
+  "pass": true,
+  "answer": "391",
+  "tok_per_s": 10.10101
+ },
+ "json_strict": {
+  "pass": true,
+  "answer": "{\"folder\": \"Career\", \"confidence\": 1}",
+  "tok_per_s": 10.092515
+ },
+ "coding": {
+  "pass": true,
+  "answer": "def is_palindrome(s):\n    import re\n    s = re.sub(r'[^a-zA-Z0-9]', '', s).lower()\n    return s == s[::-1]",
+  "tok_per_s": 10.06192
+ },
+ "bash": {
+  "pass": true,
+  "answer": "Get-ChildItem -Path \"C:\\Docs\" -Recurse -Filter \"*.pdf\" -File | Select-Object FullName",
+  "tok_per_s": 10.037175
+ },
+ "summarize": {
+  "pass": true,
+  "answer": "The NPU is a specialized processor that accelerates neural-network computations, improving AI model performance, cooling efficiency, and battery life.",
+  "tok_per_s": 10.140406
+ },
+ "meeting_actions": {
+  "pass": false,
+  "answer": "[\n  {\n    \"owner\": \"Arun\",\n    \"task\": \"Finish the marketing copy by Friday\",\n    \"due\": \"Friday\"\n  },\n  {\n    \"owner\": \"Lee\",\n    \"task\": \"Set up the demo laptop with the NPU models by Wednesday\",\n    \"due\": \"Wednesday\"\n  },\n  {\n    \"owner\": \"Priya\",\n    \"task\": \"Ensure the budget remains at 20k\",\n    \"due\": \"N/A\"\n  },\n  {\n    \"owner\": \"Priya\",\n    \"task\": \"Ensure the new privacy text is reviewed by legal\",\n    \"due\": \"N/A\"\n  }\n]",
+  "tok_per_s": 9.966058
+ },
+ "meeting_decisions": {
+  "pass": true,
+  "answer": "- The launch date was moved to November 12.\n- Arun will complete the marketing copy by Friday.\n- The demo laptop will be set up with the NPU models by Wednesday.\n- The budget remains at 20k.\n- The need for a legal review for the new privacy text is still in question.",
+  "tok_per_s": 9.943182
+ },
+ "organizer_hard": {
+  "pass": true,
+  "answer": "```json\n{\n  \"folder\": \"Research\"\n}\n```",
+  "tok_per_s": 9.658247
+ }
+}

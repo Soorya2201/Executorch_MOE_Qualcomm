@@ -1,0 +1,3 @@
+# Patches must keep their exact bytes: Git for Windows (core.autocrlf=true) would otherwise check them out
+# with CRLF line endings, and `git apply` then rejects them.
+*.patch -text
